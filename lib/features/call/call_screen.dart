@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:contact_navigator/app_theme.dart';
+import 'package:contact_navigator/core/theme/app_theme.dart';
 
 class CallScreen extends StatefulWidget {
   final String name;
@@ -28,6 +28,7 @@ class _CallScreenState extends State<CallScreen> {
             Center(
               child: CircleAvatar(
                 radius: 60,
+                // ignore: deprecated_member_use
                 backgroundColor: lightBlue.withOpacity(0.2),
                 child: Padding(
                   padding: const EdgeInsets.all(4.0),
@@ -120,6 +121,7 @@ class _CallScreenState extends State<CallScreen> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
+                  // ignore: deprecated_member_use
                   color: Colors.black.withOpacity(0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:contact_navigator/app_permissions_page.dart';
-import 'package:contact_navigator/app_theme.dart';
+import 'package:contact_navigator/features/permissions/app_permissions_page.dart';
+import 'package:contact_navigator/core/theme/app_theme.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});

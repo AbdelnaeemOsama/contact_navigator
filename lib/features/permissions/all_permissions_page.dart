@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:contact_navigator/app_theme.dart';
-import 'package:contact_navigator/contacts_page.dart';
+import 'package:contact_navigator/core/theme/app_theme.dart';
+import 'package:contact_navigator/features/contacts/contacts_page.dart';
 
 class AllPermissionsPage extends StatefulWidget {
   const AllPermissionsPage({super.key});

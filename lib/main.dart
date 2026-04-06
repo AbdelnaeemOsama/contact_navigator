@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:contact_navigator/app_theme.dart';
-import 'package:contact_navigator/splash_screen.dart';
+import 'package:contact_navigator/core/theme/app_theme.dart';
+import 'package:contact_navigator/features/onboarding/splash_screen.dart';
 
 void main() {
   runApp(const ContactNavigatorApp());

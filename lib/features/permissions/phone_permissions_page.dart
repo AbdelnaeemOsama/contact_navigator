@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:contact_navigator/app_theme.dart';
-import 'package:contact_navigator/contacts_permissions_page.dart';
+import 'package:contact_navigator/core/theme/app_theme.dart';
+import 'package:contact_navigator/features/permissions/contacts_permissions_page.dart';
 
 class PhonePermissionsPage extends StatelessWidget {
   const PhonePermissionsPage({super.key});

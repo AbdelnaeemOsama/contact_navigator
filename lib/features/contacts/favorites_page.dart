@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:contact_navigator/app_theme.dart';
-import 'package:contact_navigator/contacts_page.dart';
-import 'package:contact_navigator/call_screen.dart';
+import 'package:contact_navigator/core/theme/app_theme.dart';
+import 'package:contact_navigator/features/contacts/contacts_page.dart';
+import 'package:contact_navigator/features/call/call_screen.dart';
 
 class FavoritesPage extends StatelessWidget {
   final List<Contact> favorites;

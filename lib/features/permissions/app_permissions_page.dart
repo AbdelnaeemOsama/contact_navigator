@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:contact_navigator/app_theme.dart';
-import 'package:contact_navigator/all_permissions_page.dart';
+import 'package:contact_navigator/core/theme/app_theme.dart';
+import 'package:contact_navigator/features/permissions/phone_permissions_page.dart';
 
-class ContactsPermissionsPage extends StatelessWidget {
-  const ContactsPermissionsPage({super.key});
+class AppPermissionsPage extends StatelessWidget {
+  const AppPermissionsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +39,7 @@ class ContactsPermissionsPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              // Contacts card
+              // Map card
               Container(
                 height: 280,
                 decoration: BoxDecoration(
@@ -56,23 +56,23 @@ class ContactsPermissionsPage extends StatelessWidget {
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Image.asset(
-                  'assets/images/phone.png',
+                  'assets/images/location.png',
                   fit: BoxFit.cover,
                 ),
               ),
               const SizedBox(height: 32),
-              // Contacts icon + label
+              // Location icon + label
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Image.asset(
-                    'assets/images/icons/user.png',
+                    'assets/images/icons/map.png',
                     width: 32,
                     height: 32,
                   ),
                   const SizedBox(width: 8),
                   const Text(
-                    'Contacts',
+                    'Location',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -83,7 +83,7 @@ class ContactsPermissionsPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Contact Navigator requires access to your contacts to display, manage, and organize contact information.',
+                'Contact Navigator uses your location to enhance call and contact features with location-based functionality.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -119,7 +119,7 @@ class ContactsPermissionsPage extends StatelessWidget {
                                       vertical: 18,
                                     ),
                                     child: Text(
-                                      'Allow Contact Navigator to access your contacts?',
+                                      'Allow Contact Navigator to access your location?',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 15,
@@ -162,7 +162,7 @@ class ContactsPermissionsPage extends StatelessWidget {
                                               Navigator.of(context).push(
                                                 MaterialPageRoute(
                                                   builder: (_) =>
-                                                      const AllPermissionsPage(),
+                                                      const PhonePermissionsPage(),
                                                 ),
                                               );
                                             },
