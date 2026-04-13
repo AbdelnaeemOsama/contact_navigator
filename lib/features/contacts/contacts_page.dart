@@ -4,6 +4,8 @@ import 'package:contact_navigator/features/call/call_screen.dart';
 import 'package:contact_navigator/features/contacts/favorites_page.dart';
 import 'package:contact_navigator/features/keypad/keypad_page.dart';
 import 'package:contact_navigator/features/contacts/add_contact_page.dart';
+import 'package:contact_navigator/features/contacts/categories_page.dart';
+
 
 
 class Contact {
@@ -121,7 +123,10 @@ class _ContactsPageState extends State<ContactsPage> {
       switch (_selectedIndex) {
         case 3:
           return const KeypadPage();
+        case 2:
+          return const CategoriesPage();
         case 0:
+
         default:
           return SingleChildScrollView(
             child: Padding(
@@ -256,7 +261,11 @@ class _ContactsPageState extends State<ContactsPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          _selectedIndex == 3 ? 'Keypad' : 'Contacts',
+          _selectedIndex == 3
+              ? 'Keypad'
+              : _selectedIndex == 2
+                  ? 'Categories'
+                  : 'Contacts',
           style: const TextStyle(
             color: AppColors.textBlue,
             fontSize: 28,
@@ -264,8 +273,25 @@ class _ContactsPageState extends State<ContactsPage> {
           ),
         ),
         centerTitle: true,
+        leading: _selectedIndex == 2
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppColors.textBlue),
+                onPressed: () {
+                  setState(() {
+                    _selectedIndex = 0;
+                  });
+                },
+              )
+            : null,
         actions: [
-          if (_selectedIndex != 3)
+          if (_selectedIndex == 2)
+            IconButton(
+              icon: const Icon(Icons.add, color: AppColors.textBlue, size: 32),
+              onPressed: () {
+                // Add category
+              },
+            ),
+          if (_selectedIndex == 0)
             Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: CircleAvatar(
@@ -282,7 +308,7 @@ class _ContactsPageState extends State<ContactsPage> {
         ],
       ),
       body: getBody(),
-      floatingActionButton: _selectedIndex == 3
+      floatingActionButton: _selectedIndex == 3 || _selectedIndex == 2
           ? null
             : FloatingActionButton(
                 onPressed: () {
