@@ -70,5 +70,11 @@
 		<true/>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>This app requires access to your photo library to select a profile picture for your contacts.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>This app requires access to your camera to take a profile picture for your contacts.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>This app requires access to your microphone for video recording if needed.</string>
 	</dict>
 </plist>

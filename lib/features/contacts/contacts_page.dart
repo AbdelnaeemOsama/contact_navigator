@@ -3,6 +3,8 @@ import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:contact_navigator/features/call/call_screen.dart';
 import 'package:contact_navigator/features/contacts/favorites_page.dart';
 import 'package:contact_navigator/features/keypad/keypad_page.dart';
+import 'package:contact_navigator/features/contacts/add_contact_page.dart';
+
 
 class Contact {
   final String name;
@@ -282,12 +284,20 @@ class _ContactsPageState extends State<ContactsPage> {
       body: getBody(),
       floatingActionButton: _selectedIndex == 3
           ? null
-          : FloatingActionButton(
-              onPressed: () {},
-              backgroundColor: lightBlue,
-              shape: const CircleBorder(),
-              child: const Icon(Icons.add, color: Colors.white, size: 32),
-            ),
+            : FloatingActionButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddContactPage(),
+                    ),
+                  );
+                },
+                backgroundColor: lightBlue,
+                shape: const CircleBorder(),
+                child: const Icon(Icons.add, color: Colors.white, size: 32),
+              ),
+
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: lightBlue,
