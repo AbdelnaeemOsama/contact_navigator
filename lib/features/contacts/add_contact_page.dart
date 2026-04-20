@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
+import 'package:contact_navigator/features/contacts/address_page.dart';
 import 'package:image_picker/image_picker.dart';
 
 
@@ -134,15 +135,25 @@ class _AddContactPageState extends State<AddContactPage> {
               ),
               _buildField(label: 'Email*', hint: 'Enter email address'),
 
-              _buildField(
-                label: 'Address*',
-                hint: 'Enter address',
-                suffixIcon: Padding(
-                  padding: const EdgeInsets.all(14.0),
-                  child: Image.asset(
-                    'assets/images/add contact/gps 1.png',
-                    width: 20,
-                    height: 20,
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const AddressPage()),
+                  );
+                },
+                child: AbsorbPointer(
+                  child: _buildField(
+                    label: 'Address*',
+                    hint: 'Enter address',
+                    suffixIcon: Padding(
+                      padding: const EdgeInsets.all(14.0),
+                      child: Image.asset(
+                        'assets/images/add contact/gps 1.png',
+                        width: 20,
+                        height: 20,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -163,7 +174,7 @@ class _AddContactPageState extends State<AddContactPage> {
                   ],
                   image: const DecorationImage(
                     image: AssetImage(
-                        'assets/images/add contact/Modeling For Teens & Kids - Barbizon Modeling 4.png'),
+                        'assets/images/icons_adreeses_page/map_placeholder.png'),
                     fit: BoxFit.cover,
                   ),
                 ),

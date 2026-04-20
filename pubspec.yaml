@@ -74,6 +74,7 @@ flutter:
     - assets/images/icons_contact_page/
     - assets/images/add contact/
     - assets/images/Categories/
+    - assets/images/icons_adreeses_page/
     
 
   # An image asset can refer to one or more resolution-specific "variants", see
