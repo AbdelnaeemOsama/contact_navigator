@@ -49,6 +49,7 @@ class _AddressPageState extends State<AddressPage> {
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
+                      // ignore: deprecated_member_use
                       color: Colors.black.withOpacity(0.08),
                       blurRadius: 15,
                       offset: const Offset(0, 5),

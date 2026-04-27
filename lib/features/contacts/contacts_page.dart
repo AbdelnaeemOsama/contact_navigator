@@ -5,8 +5,8 @@ import 'package:contact_navigator/features/contacts/favorites_page.dart';
 import 'package:contact_navigator/features/keypad/keypad_page.dart';
 import 'package:contact_navigator/features/contacts/add_contact_page.dart';
 import 'package:contact_navigator/features/contacts/categories_page.dart';
-
-
+import 'package:contact_navigator/features/profile/profile_page.dart';
+import 'package:contact_navigator/features/settings/settings_page.dart';
 
 class Contact {
   final String name;
@@ -38,6 +38,7 @@ class _ContactsPageState extends State<ContactsPage> {
   final TextEditingController _searchController = TextEditingController();
   List<Contact> _allContacts = [];
   List<Contact> _filteredContacts = [];
+  final GlobalKey<CategoriesPageState> _categoriesKey = GlobalKey<CategoriesPageState>();
 
   @override
   void initState() {
@@ -121,13 +122,17 @@ class _ContactsPageState extends State<ContactsPage> {
 
     Widget getBody() {
       switch (_selectedIndex) {
-        case 3:
+        case 1:
           return const KeypadPage();
-        case 2:
-          return const CategoriesPage();
+        case 3:
+          return CategoriesPage(key: _categoriesKey);
+        case 4:
+          return const SettingsPage(isTab: true);
         case 0:
-
         default:
+          if (_selectedIndex == 2) {
+             return const Center(child: Text('Map View')); 
+          }
           return SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -261,46 +266,52 @@ class _ContactsPageState extends State<ContactsPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          _selectedIndex == 3
+          _selectedIndex == 1
               ? 'Keypad'
-              : _selectedIndex == 2
+              : _selectedIndex == 3
                   ? 'Categories'
-                  : 'Contacts',
+                  : _selectedIndex == 2
+                      ? 'Map'
+                      : _selectedIndex == 4
+                          ? 'Settings'
+                          : 'Contacts',
           style: const TextStyle(
             color: AppColors.textBlue,
             fontSize: 28,
             fontWeight: FontWeight.bold,
           ),
         ),
+        automaticallyImplyLeading: false,
         centerTitle: true,
-        leading: _selectedIndex == 2
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.textBlue),
-                onPressed: () {
-                  setState(() {
-                    _selectedIndex = 0;
-                  });
-                },
-              )
-            : null,
+        leading: null,
         actions: [
-          if (_selectedIndex == 2)
+          if (_selectedIndex == 3)
             IconButton(
               icon: const Icon(Icons.add, color: AppColors.textBlue, size: 32),
               onPressed: () {
-                // Add category
+                _categoriesKey.currentState?.showAddCategoryDialog(context);
               },
             ),
           if (_selectedIndex == 0)
             Padding(
               padding: const EdgeInsets.only(right: 16.0),
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: Colors.transparent,
-                child: ClipOval(
-                  child: Image.asset(
-                    'assets/images/icons_contact_page/boy 1.png',
-                    fit: BoxFit.cover,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfilePage(),
+                    ),
+                  );
+                },
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.transparent,
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/icons_contact_page/boy 1.png',
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
@@ -308,7 +319,7 @@ class _ContactsPageState extends State<ContactsPage> {
         ],
       ),
       body: getBody(),
-      floatingActionButton: _selectedIndex == 3 || _selectedIndex == 2
+      floatingActionButton: _selectedIndex != 0
           ? null
             : FloatingActionButton(
                 onPressed: () {
@@ -356,24 +367,28 @@ class _ContactsPageState extends State<ContactsPage> {
             ),
             BottomNavigationBarItem(
               icon: _buildBottomNavIcon(
-                'assets/images/icons_contact_page/map (1) 1.png',
+                'assets/images/icons_contact_page/dial-pad 1.png',
                 1,
+              ),
+              label: 'Keypad',
+            ),
+            BottomNavigationBarItem(
+              icon: _buildBottomNavIcon(
+                'assets/images/icons_contact_page/map (1) 1.png',
+                2,
               ),
               label: 'Map',
             ),
             BottomNavigationBarItem(
               icon: _buildBottomNavIcon(
                 'assets/images/icons_contact_page/categories 1.png',
-                2,
+                3,
               ),
               label: 'Categories',
             ),
             BottomNavigationBarItem(
-              icon: _buildBottomNavIcon(
-                'assets/images/icons_contact_page/dial-pad 1.png',
-                3,
-              ),
-              label: 'Keypad',
+              icon: _buildBottomNavIcon('', 4, isSettings: true),
+              label: 'Settings',
             ),
           ],
         ),
@@ -381,18 +396,27 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
-  Widget _buildBottomNavIcon(String path, int index) {
+  Widget _buildBottomNavIcon(String path, int index, {bool isSettings = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4.0),
-      child: Image.asset(
-        path,
-        width: 24,
-        height: 24,
-        color: _selectedIndex == index
-            ? Colors.white
-            // ignore: deprecated_member_use
-            : Colors.white.withOpacity(0.7),
-      ),
+      child: isSettings 
+        ? Icon(
+            Icons.settings,
+            size: 24,
+            color: _selectedIndex == index 
+                ? Colors.white 
+                // ignore: deprecated_member_use
+                : Colors.white.withOpacity(0.7),
+          )
+        : Image.asset(
+            path,
+            width: 24,
+            height: 24,
+            color: _selectedIndex == index
+                ? Colors.white
+                // ignore: deprecated_member_use
+                : Colors.white.withOpacity(0.7),
+          ),
     );
   }
 
@@ -568,14 +592,27 @@ class _ContactsPageState extends State<ContactsPage> {
                       ),
                     ),
                     _buildActionIcon(
-                      'assets/images/icons_contact_page/loupe 1.png',
-                      isMessage: true,
+                      '',
+                      icon: Icons.edit_note,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AddContactPage(
+                            contactToEdit: {
+                              'name': name,
+                              'phone': phone,
+                              'imagePath': imagePath,
+                            },
+                          ),
+                        ),
+                      ),
                     ),
                     _buildActionIcon(
-                      'assets/images/icons_contact_page/right-arrow 1.png',
-                      isNavigate: true,
+                      'assets/images/icons/location.png',
                     ),
-                    _buildActionIcon('assets/images/icons/location.png'),
+                    _buildActionIcon(
+                      'assets/images/icons/map.png',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -589,8 +626,7 @@ class _ContactsPageState extends State<ContactsPage> {
 
   Widget _buildActionIcon(
     String path, {
-    bool isMessage = false,
-    bool isNavigate = false,
+    IconData? icon,
     VoidCallback? onTap,
   }) {
     return InkWell(
@@ -598,14 +634,18 @@ class _ContactsPageState extends State<ContactsPage> {
       borderRadius: BorderRadius.circular(30),
       child: Container(
         padding: const EdgeInsets.all(12),
-        child: Image.asset(
-          isMessage
-              ? 'assets/images/icons/contact.png'
-              : (isNavigate ? 'assets/images/icons/location.png' : path),
-          width: 32,
-          height: 32,
-          color: const Color(0xFF33A1E5),
-        ),
+        child: icon != null
+            ? Icon(
+                icon,
+                size: 32,
+                color: const Color(0xFF33A1E5),
+              )
+            : Image.asset(
+                path,
+                width: 32,
+                height: 32,
+                color: const Color(0xFF33A1E5),
+              ),
       ),
     );
   }

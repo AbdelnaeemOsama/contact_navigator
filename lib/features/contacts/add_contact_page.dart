@@ -5,9 +5,9 @@ import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:contact_navigator/features/contacts/address_page.dart';
 import 'package:image_picker/image_picker.dart';
 
-
 class AddContactPage extends StatefulWidget {
-  const AddContactPage({super.key});
+  final Map<String, dynamic>? contactToEdit;
+  const AddContactPage({super.key, this.contactToEdit});
 
   @override
   State<AddContactPage> createState() => _AddContactPageState();
@@ -16,6 +16,39 @@ class AddContactPage extends StatefulWidget {
 class _AddContactPageState extends State<AddContactPage> {
   XFile? _selectedImage;
   final ImagePicker _picker = ImagePicker();
+  
+  late TextEditingController _firstNameController;
+  late TextEditingController _lastNameController;
+  late TextEditingController _phoneController;
+  late TextEditingController _emailController;
+  late TextEditingController _addressController;
+  late TextEditingController _notesController;
+
+  @override
+  void initState() {
+    super.initState();
+    final contact = widget.contactToEdit;
+    final String fullName = contact?['name'] ?? '';
+    final List<String> nameParts = fullName.split(' ');
+    
+    _firstNameController = TextEditingController(text: nameParts.isNotEmpty ? nameParts.first : '');
+    _lastNameController = TextEditingController(text: nameParts.length > 1 ? nameParts.last : '');
+    _phoneController = TextEditingController(text: contact?['phone'] ?? '');
+    _emailController = TextEditingController(text: ''); 
+    _addressController = TextEditingController(text: '');
+    _notesController = TextEditingController(text: '');
+  }
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _addressController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -32,6 +65,8 @@ class _AddContactPageState extends State<AddContactPage> {
 
   @override
   Widget build(BuildContext context) {
+    bool isEditing = widget.contactToEdit != null;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -45,9 +80,9 @@ class _AddContactPageState extends State<AddContactPage> {
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        title: const Text(
-          'Add Contact',
-          style: TextStyle(
+        title: Text(
+          isEditing ? 'Edit Contact' : 'Add Contact',
+          style: const TextStyle(
             color: Color(0xFF004080),
             fontSize: 24,
             fontWeight: FontWeight.w900,
@@ -100,7 +135,12 @@ class _AddContactPageState extends State<AddContactPage> {
                                   image: FileImage(File(_selectedImage!.path)),
                                   fit: BoxFit.cover,
                                 )
-                              : null,
+                              : (widget.contactToEdit?['imagePath'] != null
+                                  ? DecorationImage(
+                                      image: AssetImage(widget.contactToEdit!['imagePath']),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null),
                         ),
                       ),
                       Positioned(
@@ -125,15 +165,16 @@ class _AddContactPageState extends State<AddContactPage> {
               ),
               const SizedBox(height: 40),
               // Form Fields
-              _buildField(label: 'First Name*', hint: 'Enter first name'),
-              _buildField(label: 'Last Name*', hint: 'Enter last name'),
+              _buildField(label: 'First Name*', hint: 'Enter first name', controller: _firstNameController),
+              _buildField(label: 'Last Name*', hint: 'Enter last name', controller: _lastNameController),
               _buildField(
                 label: 'Phone Number*',
                 hint: 'Enter phone number',
+                controller: _phoneController,
                 keyboardType: TextInputType.phone,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
-              _buildField(label: 'Email*', hint: 'Enter email address'),
+              _buildField(label: 'Email*', hint: 'Enter email address', controller: _emailController),
 
               GestureDetector(
                 onTap: () {
@@ -146,6 +187,7 @@ class _AddContactPageState extends State<AddContactPage> {
                   child: _buildField(
                     label: 'Address*',
                     hint: 'Enter address',
+                    controller: _addressController,
                     suffixIcon: Padding(
                       padding: const EdgeInsets.all(14.0),
                       child: Image.asset(
@@ -180,7 +222,7 @@ class _AddContactPageState extends State<AddContactPage> {
                 ),
               ),
               const SizedBox(height: 28),
-              _buildField(label: 'Notes*', hint: 'Note'),
+              _buildField(label: 'Notes*', hint: 'Note', controller: _notesController),
               const SizedBox(height: 40),
             ],
           ),
@@ -192,6 +234,7 @@ class _AddContactPageState extends State<AddContactPage> {
   Widget _buildField({
     required String label,
     required String hint,
+    required TextEditingController controller,
     Widget? suffixIcon,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
@@ -227,6 +270,7 @@ class _AddContactPageState extends State<AddContactPage> {
               ],
             ),
             child: TextField(
+              controller: controller,
               keyboardType: keyboardType,
               inputFormatters: inputFormatters,
               style: const TextStyle(

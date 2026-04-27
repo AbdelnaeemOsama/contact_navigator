@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
+import 'package:contact_navigator/features/contacts/category_contacts_page.dart';
 
 class CategoryItem {
   final String title;
@@ -20,10 +21,10 @@ class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key, this.isTab = true});
 
   @override
-  State<CategoriesPage> createState() => _CategoriesPageState();
+  State<CategoriesPage> createState() => CategoriesPageState();
 }
 
-class _CategoriesPageState extends State<CategoriesPage> {
+class CategoriesPageState extends State<CategoriesPage> {
   final List<CategoryItem> categories = [
     CategoryItem(
       title: 'Work',
@@ -52,6 +53,79 @@ class _CategoriesPageState extends State<CategoriesPage> {
     ),
   ];
 
+  List<CategoryItem> filteredCategories = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    filteredCategories = categories;
+  }
+
+  void _filterCategories(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        filteredCategories = categories;
+      } else {
+        filteredCategories = categories
+            .where((category) =>
+                category.title.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
+  }
+
+  void addCategory(String title) {
+    setState(() {
+      categories.add(
+        CategoryItem(
+          title: title,
+          subtitle: '0 contacts',
+          iconPath: 'assets/images/Categories/Ellipse 8.png', // Default icon
+        ),
+      );
+      _filterCategories(_searchController.text); // Refresh filtered list
+    });
+  }
+
+  void showAddCategoryDialog(BuildContext context) {
+    final TextEditingController controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Add New Category'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Enter category name',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                addCategory(controller.text);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget content = Padding(
@@ -74,6 +148,8 @@ class _CategoriesPageState extends State<CategoriesPage> {
               ],
             ),
             child: TextField(
+              controller: _searchController,
+              onChanged: _filterCategories,
               decoration: InputDecoration(
                 hintText: 'Search contacts ....',
                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 16),
@@ -94,78 +170,90 @@ class _CategoriesPageState extends State<CategoriesPage> {
           // Categories List
           Expanded(
             child: ListView.separated(
-              itemCount: categories.length,
+              itemCount: filteredCategories.length,
               separatorBuilder: (context, index) => const SizedBox(height: 20),
               itemBuilder: (context, index) {
-                final category = categories[index];
-                return Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(50),
-                    boxShadow: [
-                      BoxShadow(
-                        // ignore: deprecated_member_use
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Category Icon
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: category.iconBgColor,
-                          shape: BoxShape.circle,
+                final category = filteredCategories[index];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CategoryContactsPage(
+                          categoryTitle: category.title,
                         ),
-                        child: Center(
-                          child: Image.asset(
-                            category.iconPath,
-                            width: 30,
-                            height: 30,
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(
+                          // ignore: deprecated_member_use
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        // Category Icon
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: category.iconBgColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Image.asset(
+                              category.iconPath,
+                              width: 30,
+                              height: 30,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 20),
-                      // Category Text
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              category.title,
-                              style: const TextStyle(
-                                color: AppColors.textBlue,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                        const SizedBox(width: 20),
+                        // Category Text
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                category.title,
+                                style: const TextStyle(
+                                  color: AppColors.textBlue,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              category.subtitle,
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 14,
+                              const SizedBox(height: 4),
+                              Text(
+                                category.subtitle,
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      // Right Arrow
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12.0),
-                        child: Image.asset(
-                          'assets/images/Categories/right-arrow (1) 3.png',
-                          width: 24,
-                          height: 24,
-                          color: Colors.grey[600],
+                        // Right Arrow
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12.0),
+                          child: Image.asset(
+                            'assets/images/Categories/right-arrow (1) 3.png',
+                            width: 24,
+                            height: 24,
+                            color: Colors.grey[600],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
@@ -200,7 +288,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add, color: AppColors.textBlue, size: 32),
-            onPressed: () {},
+            onPressed: () => showAddCategoryDialog(context),
           ),
           const SizedBox(width: 8),
         ],
