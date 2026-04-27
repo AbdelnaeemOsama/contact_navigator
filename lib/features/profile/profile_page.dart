@@ -77,8 +77,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       height: 160,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.blue.withOpacity(0.2),
-                        border: Border.all(color: Colors.blue.withOpacity(0.1), width: 2),
+                        color: Colors.blue.withValues(alpha: 0.2),
+                        border: Border.all(color: Colors.blue.withValues(alpha: 0.1), width: 2),
                       ),
                       child: ClipOval(
                         child: Image.asset(
@@ -135,7 +135,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: lightBlueBg.withOpacity(0.5),
+                  color: lightBlueBg.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(40),
                 ),
                 child: Column(
@@ -236,8 +236,7 @@ class _ProfilePageState extends State<ProfilePage> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                // ignore: deprecated_member_use
-                color: Colors.black.withOpacity(0.1),
+                color: Colors.black.withValues(alpha: 0.1),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
