@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
-import 'package:contact_navigator/features/contacts/contacts_page.dart';
 import 'package:contact_navigator/features/call/call_screen.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 
 class FavoritesPage extends StatelessWidget {
   final List<Contact> favorites;
@@ -62,7 +62,7 @@ class FavoritesPage extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) =>
-                CallScreen(name: contact.name, imagePath: contact.imagePath),
+                CallScreen(name: contact.displayName ?? '', imagePath: ''),
           ),
         );
       },
@@ -70,17 +70,17 @@ class FavoritesPage extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 35,
-            backgroundColor: contact.bgColor,
+            backgroundColor: const Color(0xFFD4E4FC),
             child: Padding(
               padding: const EdgeInsets.all(4.0),
               child: ClipOval(
-                child: Image.asset(contact.imagePath, fit: BoxFit.cover),
+                child: contact.photo?.thumbnail != null ? Image.memory(contact.photo!.thumbnail!, fit: BoxFit.cover) : const Icon(Icons.person, color: Colors.white),
               ),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            contact.name,
+            contact.displayName ?? '',
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: AppColors.textBlue,

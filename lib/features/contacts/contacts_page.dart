@@ -7,22 +7,12 @@ import 'package:contact_navigator/features/contacts/add_contact_page.dart';
 import 'package:contact_navigator/features/contacts/categories_page.dart';
 import 'package:contact_navigator/features/profile/profile_page.dart';
 import 'package:contact_navigator/features/settings/settings_page.dart';
-
-class Contact {
-  final String name;
-  final String phone;
-  final String imagePath;
-  final Color bgColor;
-  final bool isFavorite;
-
-  Contact({
-    required this.name,
-    required this.phone,
-    required this.imagePath,
-    required this.bgColor,
-    this.isFavorite = false,
-  });
-}
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:typed_data';
+import 'bloc/contacts_bloc.dart';
+import 'bloc/contacts_event.dart';
+import 'bloc/contacts_state.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ContactsPage extends StatefulWidget {
   const ContactsPage({super.key});
@@ -36,78 +26,19 @@ class _ContactsPageState extends State<ContactsPage> {
   int? _expandedIndex; // To track which contact is expanded
 
   final TextEditingController _searchController = TextEditingController();
-  List<Contact> _allContacts = [];
-  List<Contact> _filteredContacts = [];
   final GlobalKey<CategoriesPageState> _categoriesKey = GlobalKey<CategoriesPageState>();
 
   @override
   void initState() {
     super.initState();
-    _allContacts = [
-      Contact(
-        name: 'Esraa',
-        phone: '01000000000',
-        imagePath: 'assets/images/icons_contact_page/woman 1.png',
-        bgColor: const Color(0xFFD4E4FC),
-        isFavorite: true,
-      ),
-      Contact(
-        name: 'El Sayed',
-        phone: '01000000000',
-        imagePath: 'assets/images/icons_contact_page/man 1.png',
-        bgColor: const Color(0xFFC2E8FF),
-        isFavorite: true,
-      ),
-      Contact(
-        name: 'Logy',
-        phone: '01000000000',
-        imagePath: 'assets/images/icons_contact_page/woman_2.png',
-        bgColor: const Color(0xFFFF7B93),
-        isFavorite: true,
-      ),
-      Contact(
-        name: 'Walid',
-        phone: '01000000000',
-        imagePath: 'assets/images/icons_contact_page/boy2.png',
-        bgColor: const Color(0xFFD4E4FC),
-        isFavorite: true,
-      ),
-      Contact(
-        name: 'Omar',
-        phone: '01000000000',
-        imagePath: 'assets/images/icons_contact_page/employee.png',
-        bgColor: const Color(0xFFE5E7EB),
-      ),
-      Contact(
-        name: 'Alaa',
-        phone: '01000000000',
-        imagePath: 'assets/images/icons_contact_page/woman_3.png',
-        bgColor: const Color(0xFFFF7B93),
-      ),
-      Contact(
-        name: 'Abdelnaeem',
-        phone: '01000000000',
-        imagePath: 'assets/images/icons_contact_page/boy 1.png',
-        bgColor: const Color(0xFFE5E7EB),
-      ),
-    ];
-    _filteredContacts = _allContacts;
+    context.read<ContactsBloc>().add(LoadContactsEvent());
   }
 
   void _filterContacts(String query) {
     setState(() {
       _expandedIndex = null;
-      if (query.isEmpty) {
-        _filteredContacts = _allContacts;
-      } else {
-        _filteredContacts = _allContacts
-            .where(
-              (contact) =>
-                  contact.name.toLowerCase().contains(query.toLowerCase()),
-            )
-            .toList();
-      }
     });
+    context.read<ContactsBloc>().add(SearchContactsEvent(query));
   }
 
   @override
@@ -133,129 +64,336 @@ class _ContactsPageState extends State<ContactsPage> {
           if (_selectedIndex == 2) {
              return const Center(child: Text('Map View')); 
           }
-          return SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          // ignore: deprecated_member_use
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+          return BlocBuilder<ContactsBloc, ContactsState>(
+            builder: (context, state) {
+              if (state is ContactsLoading) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(color: lightBlue),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Loading contacts...',
+                        style: TextStyle(
+                          color: AppColors.textBlue.withValues(alpha: 0.7),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              } else if (state is ContactsError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.error_outline_rounded,
+                            color: Colors.redAccent,
+                            size: 56,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Something went wrong',
+                          style: TextStyle(
+                            color: AppColors.textBlue,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          state.message,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            context.read<ContactsBloc>().add(LoadContactsEvent());
+                          },
+                          icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                          label: const Text(
+                            'Retry',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: lightBlue,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: _filterContacts,
-                      decoration: InputDecoration(
-                        hintText: 'Search contacts',
-                        hintStyle: const TextStyle(color: Colors.grey),
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Image.asset(
-                            'assets/images/icons_contact_page/loupe 1.png',
-                            width: 20,
-                            height: 20,
-                            color: Colors.grey,
+                  ),
+                );
+              } else if (state is ContactsPermissionDenied) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: lightBlue.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.contacts_rounded,
+                            color: lightBlue,
+                            size: 56,
                           ),
                         ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Permission Required',
+                          style: TextStyle(
+                            color: AppColors.textBlue,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Contact Navigator needs access to your contacts to display and manage them. Please grant permission in settings.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 14,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            context.read<ContactsBloc>().add(LoadContactsEvent());
+                          },
+                          icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                          label: const Text(
+                            'Try Again',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: lightBlue,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () async {
+                            await openAppSettings();
+                          },
+                          child: const Text(
+                            'Open Settings',
+                            style: TextStyle(
+                              color: lightBlue,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  if (_searchController.text.isEmpty) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                );
+              } else if (state is ContactsInitial) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.people_outline_rounded,
+                        color: lightBlue,
+                        size: 56,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Tap to load contacts',
+                        style: TextStyle(
+                          color: AppColors.textBlue.withValues(alpha: 0.7),
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: () {
+                          context.read<ContactsBloc>().add(LoadContactsEvent());
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: lightBlue,
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                        ),
+                        child: const Text(
+                          'Load Contacts',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              } else if (state is ContactsLoaded) {
+                final favorites = state.allContacts.take(5).toList();
+                return SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        const SizedBox(height: 16),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                // ignore: deprecated_member_use
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: _filterContacts,
+                            decoration: InputDecoration(
+                              hintText: 'Search contacts',
+                              hintStyle: const TextStyle(color: Colors.grey),
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Image.asset(
+                                  'assets/images/icons_contact_page/loupe 1.png',
+                                  width: 20,
+                                  height: 20,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        if (_searchController.text.isEmpty && favorites.isNotEmpty) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Favorites',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textBlue,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => FavoritesPage(
+                                        favorites: favorites,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  'View All',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    // ignore: deprecated_member_use
+                                    color: AppColors.textBlue.withOpacity(0.8),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            height: 110,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              children: favorites
+                                  .map(
+                                    (c) => Padding(
+                                      padding: const EdgeInsets.only(right: 16.0),
+                                      child: _buildFavoriteItem(
+                                        c.photo?.thumbnail,
+                                        c.displayName ?? '',
+                                        _getContactColor(c.displayName ?? ''),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
                         const Text(
-                          'Favorites',
+                          'All Contacts',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textBlue,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => FavoritesPage(
-                                  favorites: _allContacts
-                                      .where((c) => c.isFavorite)
-                                      .toList(),
-                                ),
-                              ),
-                            );
-                          },
-                          child: Text(
-                            'View All',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              // ignore: deprecated_member_use
-                              color: AppColors.textBlue.withOpacity(0.8),
-                            ),
-                          ),
-                        ),
+                        const SizedBox(height: 16),
+                        ...List.generate(state.filteredContacts.length, (index) {
+                          final contact = state.filteredContacts[index];
+                          return _buildContactItem(
+                            index,
+                            contact.photo?.thumbnail,
+                            contact.displayName ?? '',
+                            contact.phones.isNotEmpty ? contact.phones.first.number : '',
+                            _getContactColor(contact.displayName ?? ''),
+                          );
+                        }),
+                        const SizedBox(height: 80),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 110,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: _allContacts
-                            .where((c) => c.isFavorite)
-                            .map(
-                              (c) => Padding(
-                                padding: const EdgeInsets.only(right: 16.0),
-                                child: _buildFavoriteItem(
-                                  c.imagePath,
-                                  c.name,
-                                  c.bgColor,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                  const Text(
-                    'All Contacts',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textBlue,
-                    ),
                   ),
-                  const SizedBox(height: 16),
-                  ...List.generate(_filteredContacts.length, (index) {
-                    final contact = _filteredContacts[index];
-                    return _buildContactItem(
-                      index,
-                      contact.imagePath,
-                      contact.name,
-                      contact.phone,
-                      contact.bgColor,
-                    );
-                  }),
-                  const SizedBox(height: 80),
-                ],
-              ),
-            ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
           );
       }
     }
@@ -420,7 +558,12 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
-  Widget _buildFavoriteItem(String imagePath, String name, Color bgColor) {
+  Color _getContactColor(String name) {
+    final colors = [const Color(0xFFD4E4FC), const Color(0xFFC2E8FF), const Color(0xFFFF7B93), const Color(0xFFE5E7EB)];
+    return colors[name.hashCode % colors.length];
+  }
+
+  Widget _buildFavoriteItem(Uint8List? photo, String name, Color bgColor) {
     return Column(
       children: [
         CircleAvatar(
@@ -428,7 +571,7 @@ class _ContactsPageState extends State<ContactsPage> {
           backgroundColor: bgColor,
           child: Padding(
             padding: const EdgeInsets.all(4.0),
-            child: ClipOval(child: Image.asset(imagePath, fit: BoxFit.cover)),
+            child: ClipOval(child: photo != null ? Image.memory(photo, fit: BoxFit.cover) : const Icon(Icons.person, color: Colors.white)),
           ),
         ),
         const SizedBox(height: 8),
@@ -446,7 +589,7 @@ class _ContactsPageState extends State<ContactsPage> {
 
   Widget _buildContactItem(
     int index,
-    String imagePath,
+    Uint8List? photo,
     String name,
     String phone,
     Color bgColor,
@@ -462,7 +605,7 @@ class _ContactsPageState extends State<ContactsPage> {
             context,
             MaterialPageRoute(
               builder: (context) =>
-                  CallScreen(name: name, imagePath: imagePath),
+                  CallScreen(name: name, imagePath: ''),
             ),
           );
         }
@@ -521,7 +664,7 @@ class _ContactsPageState extends State<ContactsPage> {
                     child: Padding(
                       padding: const EdgeInsets.all(2.0),
                       child: ClipOval(
-                        child: Image.asset(imagePath, fit: BoxFit.cover),
+                        child: photo != null ? Image.memory(photo, fit: BoxFit.cover) : const Icon(Icons.person, color: Colors.white),
                       ),
                     ),
                   ),
@@ -587,7 +730,7 @@ class _ContactsPageState extends State<ContactsPage> {
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              CallScreen(name: name, imagePath: imagePath),
+                              CallScreen(name: name, imagePath: ''),
                         ),
                       ),
                     ),
@@ -601,7 +744,7 @@ class _ContactsPageState extends State<ContactsPage> {
                             contactToEdit: {
                               'name': name,
                               'phone': phone,
-                              'imagePath': imagePath,
+                              'photo': photo,
                             },
                           ),
                         ),
