@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
-import 'package:contact_navigator/features/contacts/favorites_page.dart';
 import 'package:contact_navigator/features/contacts/add_contact_page.dart';
 import 'package:contact_navigator/core/services/voice_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,9 +12,9 @@ import 'bloc/contacts_bloc.dart';
 import 'bloc/contacts_event.dart';
 import 'bloc/contacts_state.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'widgets/contact_list_item.dart';
 import 'widgets/contacts_search_bar.dart';
+import 'widgets/contacts_favorites_section.dart';
 import 'package:contact_navigator/core/widgets/custom_bottom_nav.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -129,7 +128,10 @@ class _ContactsPageState extends State<ContactsPage> {
         if (index == 0) {
           return ContactsSearchBar(onQueryChanged: _onSearchQueryChanged);
         } else if (index == 1) {
-          return _buildFavoritesSection(favorites, state.nameFormat);
+          return ContactsFavoritesSection(
+            favorites: favorites,
+            nameFormat: state.nameFormat,
+          );
         } else if (index == 2) {
           return _buildSectionHeader('All Contacts');
         } else if (index == state.filteredContacts.length + 3) {
@@ -160,45 +162,6 @@ class _ContactsPageState extends State<ContactsPage> {
           },
         );
       },
-    );
-  }
-
-  Widget _buildFavoritesSection(List<Contact> favorites, ContactNameFormat nameFormat) {
-    if (favorites.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Favorites', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textBlue)),
-            GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => FavoritesPage(favorites: favorites))),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(color: AppColors.primaryBlue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                child: const Text('View All', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primaryBlue)),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          height: 120,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: favorites.length,
-            itemBuilder: (context, fIndex) {
-              final c = favorites[fIndex];
-              return Padding(
-                padding: const EdgeInsets.only(right: 20.0),
-                child: _buildFavoriteItem(c, _getContactColor(c.displayName ?? ''), nameFormat),
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 
@@ -341,41 +304,4 @@ class _ContactsPageState extends State<ContactsPage> {
     return colors[name.hashCode % colors.length];
   }
 
-  Widget _buildFavoriteItem(Contact contact, Color bgColor, ContactNameFormat nameFormat) {
-    final photo = contact.photo?.thumbnail;
-    final name = _getFormattedName(contact, nameFormat);
-    return GestureDetector(
-      onTap: () => _makeCall(contact),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: bgColor.withValues(alpha: 0.3),
-            backgroundImage: photo != null ? MemoryImage(photo) : null,
-            child: photo == null ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)) : null,
-          ),
-          const SizedBox(height: 8),
-          SizedBox(width: 75, child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textBlue))),
-        ],
-      ),
-    );
-  }
-
-  String _getFormattedName(Contact contact, ContactNameFormat format) {
-    if (contact.name == null) return contact.displayName ?? '';
-    
-    final first = contact.name!.first;
-    final last = contact.name!.last;
-    
-    if (format == ContactNameFormat.firstLast) {
-      return '$first $last'.replaceAll('null', '').trim();
-    } else {
-      return '$last $first'.replaceAll('null', '').trim();
-    }
-  }
-
-  Future<void> _makeCall(Contact contact) async {
-    if (contact.phones.isEmpty) return;
-    await FlutterPhoneDirectCaller.callNumber(contact.phones.first.number);
-  }
 }
