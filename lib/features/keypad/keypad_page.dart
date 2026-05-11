@@ -3,9 +3,37 @@ import 'package:flutter/services.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_bloc.dart';
+import 'package:contact_navigator/features/contacts/bloc/contacts_event.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_state.dart';
 import 'package:contact_navigator/features/contacts/add_contact_page.dart';
+
+/// Space for [CustomBottomNav] (margin + height) so keypad keys are not under the bar.
+double _keypadBottomInset(BuildContext context) {
+  final safe = MediaQuery.paddingOf(context).bottom;
+  return safe + 110;
+}
+
+class _KeypadSuggestion {
+  final Contact contact;
+  final Phone phone;
+  final int score;
+  final String digitsOnly;
+
+  _KeypadSuggestion({
+    required this.contact,
+    required this.phone,
+    required this.score,
+    required this.digitsOnly,
+  });
+
+  /// Prefer raw number (keeps + / spaces) for the dial field; fall back to digits.
+  String get dialFieldValue {
+    final raw = phone.number.trim();
+    return raw.isNotEmpty ? raw : digitsOnly;
+  }
+}
 
 class KeypadPage extends StatefulWidget {
   const KeypadPage({super.key});
@@ -17,6 +45,93 @@ class KeypadPage extends StatefulWidget {
 class _KeypadPageState extends State<KeypadPage> {
   String _dialedNumber = '';
   bool _isCalling = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = context.read<ContactsBloc>().state;
+      if (state is ContactsInitial) {
+        context.read<ContactsBloc>().add(const LoadContactsEvent());
+      }
+    });
+  }
+
+  static String _letterToT9(String ch) {
+    final c = ch.toLowerCase();
+    if ('abc'.contains(c)) return '2';
+    if ('def'.contains(c)) return '3';
+    if ('ghi'.contains(c)) return '4';
+    if ('jkl'.contains(c)) return '5';
+    if ('mno'.contains(c)) return '6';
+    if ('pqrs'.contains(c)) return '7';
+    if ('tuv'.contains(c)) return '8';
+    if ('wxyz'.contains(c)) return '9';
+    return '';
+  }
+
+  static String _nameToT9Digits(String? name) {
+    if (name == null || name.isEmpty) return '';
+    final b = StringBuffer();
+    for (var i = 0; i < name.length; i++) {
+      final unit = name.substring(i, i + 1);
+      final t9 = _letterToT9(unit);
+      if (t9.isNotEmpty) b.write(t9);
+    }
+    return b.toString();
+  }
+
+  static List<_KeypadSuggestion> _suggestionsFor(List<Contact> contacts, String dialed) {
+    final query = dialed.replaceAll(RegExp(r'\D'), '');
+    if (query.isEmpty) return [];
+
+    final raw = <_KeypadSuggestion>[];
+    for (final c in contacts) {
+      if (c.phones.isEmpty) continue;
+      final t9 = _nameToT9Digits(c.displayName ?? '');
+      final nameMatch = t9.contains(query);
+      final namePrefix = t9.startsWith(query);
+
+      for (final p in c.phones) {
+        final digits = p.number.replaceAll(RegExp(r'\D'), '');
+        if (digits.isEmpty) continue;
+
+        var score = 0;
+        if (digits.startsWith(query)) {
+          score += 1000;
+        } else if (digits.contains(query)) {
+          score += 500;
+        }
+        if (namePrefix) {
+          score += 300;
+        } else if (nameMatch) {
+          score += 200;
+        }
+        if (score == 0) continue;
+
+        raw.add(
+          _KeypadSuggestion(
+            contact: c,
+            phone: p,
+            score: score,
+            digitsOnly: digits,
+          ),
+        );
+      }
+    }
+
+    raw.sort((a, b) => b.score.compareTo(a.score));
+    final seen = <String>{};
+    final unique = <_KeypadSuggestion>[];
+    for (final s in raw) {
+      final id = s.contact.id ?? s.contact.displayName ?? '';
+      final key = '$id|${s.phone.number}';
+      if (seen.add(key)) unique.add(s);
+      if (unique.length >= 12) break;
+    }
+    return unique;
+  }
 
   void _onNumberTapped(String number) {
     HapticFeedback.lightImpact();
@@ -52,7 +167,10 @@ class _KeypadPageState extends State<KeypadPage> {
 
   Future<void> _makeCall([String? number]) async {
     final targetNumber = number ?? _dialedNumber;
-    if (targetNumber.isEmpty || _isCalling) return;
+    if (targetNumber.replaceAll(RegExp(r'\D'), '').isEmpty && !targetNumber.contains('+')) {
+      return;
+    }
+    if (_isCalling) return;
 
     HapticFeedback.mediumImpact();
     setState(() => _isCalling = true);
@@ -73,33 +191,27 @@ class _KeypadPageState extends State<KeypadPage> {
   String _formatNumber(String number) {
     if (number.length <= 3) return number;
     if (number.length <= 6) return '${number.substring(0, 3)} ${number.substring(3)}';
-    if (number.length <= 10) return '${number.substring(0, 3)} ${number.substring(3, 6)} ${number.substring(6)}';
+    if (number.length <= 10) {
+      return '${number.substring(0, 3)} ${number.substring(3, 6)} ${number.substring(6)}';
+    }
     return number;
   }
 
   @override
   Widget build(BuildContext context) {
+    final bottom = _keypadBottomInset(context);
+
     return SingleChildScrollView(
+      padding: EdgeInsets.only(bottom: bottom),
       child: Column(
         children: [
           const SizedBox(height: 20),
-          // Number Display with Add Button
           _buildNumberDisplayWithAdd(),
-          
-          // Match Display (Pill style)
-          _buildMatchDisplay(),
-    
-          const SizedBox(height: 20),
-    
-          // Keypad Grid
+          _buildAutocompleteSuggestions(),
+          const SizedBox(height: 12),
           _buildKeypadGrid(),
-    
           const SizedBox(height: 20),
-    
-          // Action Buttons
           _buildActionButtons(),
-          
-          const SizedBox(height: 100), // Balanced space for the new pill nav
         ],
       ),
     );
@@ -108,11 +220,11 @@ class _KeypadPageState extends State<KeypadPage> {
   Widget _buildNumberDisplayWithAdd() {
     return BlocBuilder<ContactsBloc, ContactsState>(
       builder: (context, state) {
-        bool exists = false;
+        var exists = false;
         if (state is ContactsLoaded && _dialedNumber.isNotEmpty) {
           final queryDigits = _dialedNumber.replaceAll(RegExp(r'\D'), '');
-          exists = state.allContacts.any((c) => 
-            c.phones.any((p) => p.number.replaceAll(RegExp(r'\D'), '') == queryDigits)
+          exists = state.allContacts.any(
+            (c) => c.phones.any((p) => p.number.replaceAll(RegExp(r'\D'), '') == queryDigits),
           );
         }
 
@@ -136,9 +248,9 @@ class _KeypadPageState extends State<KeypadPage> {
               ),
               if (_dialedNumber.isNotEmpty && !exists)
                 IconButton(
-                  onPressed: () => Navigator.push(
+                  onPressed: () => Navigator.push<void>(
                     context,
-                    MaterialPageRoute(
+                    MaterialPageRoute<void>(
                       builder: (context) => AddContactPage(initialPhone: _dialedNumber),
                     ),
                   ),
@@ -154,59 +266,114 @@ class _KeypadPageState extends State<KeypadPage> {
     );
   }
 
-  Widget _buildMatchDisplay() {
-    if (_dialedNumber.isEmpty) return const SizedBox(height: 40);
-    
+  Widget _buildAutocompleteSuggestions() {
+    if (_dialedNumber.replaceAll(RegExp(r'\D'), '').isEmpty && !_dialedNumber.contains('+')) {
+      return const SizedBox(height: 8);
+    }
+
     return BlocBuilder<ContactsBloc, ContactsState>(
       builder: (context, state) {
-        if (state is ContactsLoaded) {
-          final query = _dialedNumber.replaceAll(RegExp(r'\D'), '');
-          final match = state.allContacts.where((c) {
-            final phones = c.phones.map((p) => p.number.replaceAll(RegExp(r'\D'), ''));
-            return phones.any((p) => p.contains(query));
-          }).firstOrNull;
-
-          if (match == null) return const SizedBox(height: 40);
-
-          return Padding(
-            padding: const EdgeInsets.only(top: 5),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.grey.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.person_pin_circle_rounded, size: 16, color: Colors.grey),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      match.displayName ?? 'Unknown',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    match.phones.first.number,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
+        if (state is ContactsLoading || state is ContactsInitial) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: Text(
+                'Loading contacts…',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
               ),
             ),
           );
         }
-        return const SizedBox(height: 40);
+        if (state is! ContactsLoaded) {
+          return const SizedBox(height: 8);
+        }
+
+        final items = _suggestionsFor(state.allContacts, _dialedNumber);
+        if (items.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'No matching contacts',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 220),
+            child: Material(
+              color: Colors.white,
+              elevation: 1,
+              shadowColor: Colors.black26,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: items.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, i) {
+                  final item = items[i];
+                  final name = item.contact.displayName ?? 'Unknown';
+                  final photo = item.contact.photo?.thumbnail;
+                  return ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                    leading: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.12),
+                      backgroundImage: photo != null ? MemoryImage(photo) : null,
+                      child: photo == null
+                          ? Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textBlue,
+                              ),
+                            )
+                          : null,
+                    ),
+                    title: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: AppColors.textBlue,
+                      ),
+                    ),
+                    subtitle: Text(
+                      item.phone.number,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                    ),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _dialedNumber = item.dialFieldValue);
+                    },
+                    trailing: IconButton(
+                      tooltip: 'Call',
+                      icon: const Icon(Icons.call, color: Colors.green),
+                      onPressed: () => _makeCall(item.phone.number),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
       },
     );
   }
 
   Widget _buildKeypadGrid() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 40),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         children: [
           _buildRow(['1', '2', '3']),
@@ -227,23 +394,25 @@ class _KeypadPageState extends State<KeypadPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(width: 48), // Spacer to match backspace width for centering
+          const SizedBox(width: 48),
           const Spacer(),
-          GestureDetector(
-            onTap: () => _makeCall(),
-            child: Container(
-              width: 75,
-              height: 75,
-              decoration: const BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
+          Material(
+            color: Colors.green,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: _isCalling ? null : () => _makeCall(),
+              child: SizedBox(
+                width: 76,
+                height: 76,
+                child: _isCalling
+                    ? const Padding(
+                        padding: EdgeInsets.all(22),
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.phone, color: Colors.white, size: 36),
               ),
-              child: _isCalling
-                  ? const Padding(
-                      padding: EdgeInsets.all(22),
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                    )
-                  : const Icon(Icons.phone, color: Colors.white, size: 36),
             ),
           ),
           const Spacer(),
@@ -265,56 +434,77 @@ class _KeypadPageState extends State<KeypadPage> {
 
   Widget _buildRow(List<String> labels) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: labels.map((label) => _buildKey(label)).toList(),
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: labels.map(_buildKey).toList(),
     );
   }
 
   Widget _buildKey(String label) {
-    String subLabel = '';
+    var subLabel = '';
     switch (label) {
-      case '2': subLabel = 'A B C'; break;
-      case '3': subLabel = 'D E F'; break;
-      case '4': subLabel = 'G H I'; break;
-      case '5': subLabel = 'J K L'; break;
-      case '6': subLabel = 'M N O'; break;
-      case '7': subLabel = 'P Q R S'; break;
-      case '8': subLabel = 'T U V'; break;
-      case '9': subLabel = 'W X Y Z'; break;
-      case '0': subLabel = '+'; break;
+      case '2':
+        subLabel = 'A B C';
+        break;
+      case '3':
+        subLabel = 'D E F';
+        break;
+      case '4':
+        subLabel = 'G H I';
+        break;
+      case '5':
+        subLabel = 'J K L';
+        break;
+      case '6':
+        subLabel = 'M N O';
+        break;
+      case '7':
+        subLabel = 'P Q R S';
+        break;
+      case '8':
+        subLabel = 'T U V';
+        break;
+      case '9':
+        subLabel = 'W X Y Z';
+        break;
+      case '0':
+        subLabel = '+';
+        break;
     }
-    return GestureDetector(
-      onTap: () => _onNumberTapped(label),
-      onLongPress: () => _onNumberLongPressed(label),
-      child: Container(
-        width: 68,
-        height: 68,
-        decoration: BoxDecoration(
-          color: Colors.grey.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w400,
-                color: AppColors.textBlue,
-              ),
-            ),
-            if (subLabel.isNotEmpty)
+
+    return Material(
+      color: Colors.grey.withValues(alpha: 0.12),
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: () => _onNumberTapped(label),
+        onLongPress: label == '0' ? () => _onNumberLongPressed(label) : null,
+        child: SizedBox(
+          width: 72,
+          height: 72,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
               Text(
-                subLabel,
+                label,
                 style: const TextStyle(
-                  fontSize: 9,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w400,
                   color: AppColors.textBlue,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1,
                 ),
               ),
-          ],
+              if (subLabel.isNotEmpty)
+                Text(
+                  subLabel,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    color: AppColors.textBlue,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
