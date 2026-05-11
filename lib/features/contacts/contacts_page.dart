@@ -8,7 +8,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:contact_navigator/features/contacts/categories_page.dart';
 import 'package:contact_navigator/features/keypad/keypad_page.dart';
 import 'package:contact_navigator/features/settings/settings_page.dart';
-import 'package:contact_navigator/core/utils/text_utils.dart';
 import 'package:contact_navigator/features/map/map_tab.dart';
 import 'bloc/contacts_bloc.dart';
 import 'bloc/contacts_event.dart';
@@ -16,6 +15,7 @@ import 'bloc/contacts_state.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'widgets/contact_list_item.dart';
+import 'widgets/contacts_search_bar.dart';
 import 'package:contact_navigator/core/widgets/custom_bottom_nav.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -31,7 +31,6 @@ class _ContactsPageState extends State<ContactsPage> {
   int? _expandedIndex;
   LatLng? _mapFocusLocation;
 
-  final TextEditingController _searchController = TextEditingController();
   final GlobalKey<CategoriesPageState> _categoriesKey = GlobalKey<CategoriesPageState>();
 
   @override
@@ -40,17 +39,11 @@ class _ContactsPageState extends State<ContactsPage> {
     context.read<ContactsBloc>().add(LoadContactsEvent());
   }
 
-  void _filterContacts(String query) {
+  void _onSearchQueryChanged(String query) {
     setState(() {
       _expandedIndex = null;
     });
     context.read<ContactsBloc>().add(SearchContactsEvent(query));
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   Widget _buildContactsTab(Color lightBlue) {
@@ -134,7 +127,7 @@ class _ContactsPageState extends State<ContactsPage> {
       itemCount: state.filteredContacts.length + 4,
       itemBuilder: (context, index) {
         if (index == 0) {
-          return _buildSearchBar();
+          return ContactsSearchBar(onQueryChanged: _onSearchQueryChanged);
         } else if (index == 1) {
           return _buildFavoritesSection(favorites, state.nameFormat);
         } else if (index == 2) {
@@ -167,42 +160,6 @@ class _ContactsPageState extends State<ContactsPage> {
           },
         );
       },
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
-            ],
-          ),
-          child: ValueListenableBuilder<TextEditingValue>(
-            valueListenable: _searchController,
-            builder: (context, value, child) {
-              return Directionality(
-                textDirection: TextUtils.getTextDirection(value.text),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: _filterContacts,
-                  decoration: const InputDecoration(
-                    hintText: 'Search contacts',
-                    hintStyle: TextStyle(color: Colors.grey),
-                    prefixIcon: Icon(Icons.search_rounded, color: Colors.grey, size: 24),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 16),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 
