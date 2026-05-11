@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
-import 'package:contact_navigator/features/contacts/contacts_page.dart';
-
+import 'package:contact_navigator/core/routes/app_routes.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 class AllPermissionsPage extends StatefulWidget {
   const AllPermissionsPage({super.key});
 
@@ -11,9 +12,56 @@ class AllPermissionsPage extends StatefulWidget {
 
 class _AllPermissionsPageState extends State<AllPermissionsPage> {
   // Switch states
-  bool phoneGranted = true;
-  bool contactsGranted = true;
-  bool locationGranted = true;
+  bool phoneGranted = false;
+  bool contactsGranted = false;
+  bool locationGranted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermissions();
+  }
+
+  Future<void> _checkPermissions() async {
+    final phoneStatus = await Permission.phone.status;
+    final contactsStatus = await Permission.contacts.status;
+    final locationStatus = await Permission.location.status;
+
+    if (mounted) {
+      setState(() {
+        phoneGranted = phoneStatus.isGranted;
+        contactsGranted = contactsStatus.isGranted;
+        locationGranted = locationStatus.isGranted;
+      });
+    }
+  }
+
+  Future<void> _requestPhone() async {
+    final status = await [Permission.phone, Permission.sms].request();
+    if (mounted) {
+      setState(() {
+        phoneGranted = status[Permission.phone]?.isGranted ?? false;
+      });
+    }
+  }
+
+  Future<void> _requestContacts() async {
+    final status = await Permission.contacts.request();
+    if (mounted) {
+      setState(() {
+        contactsGranted = status.isGranted;
+      });
+    }
+  }
+
+  Future<void> _requestLocation() async {
+    final status = await Permission.location.request();
+    if (mounted) {
+      setState(() {
+        locationGranted = status.isGranted;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,9 +107,11 @@ class _AllPermissionsPageState extends State<AllPermissionsPage> {
                 cardColor: cardColor,
                 value: phoneGranted,
                 onChanged: (val) {
-                  setState(() {
-                    phoneGranted = val;
-                  });
+                  if (val) {
+                    _requestPhone();
+                  } else {
+                    openAppSettings();
+                  }
                 },
               ),
               const SizedBox(height: 16),
@@ -75,9 +125,11 @@ class _AllPermissionsPageState extends State<AllPermissionsPage> {
                 cardColor: cardColor,
                 value: contactsGranted,
                 onChanged: (val) {
-                  setState(() {
-                    contactsGranted = val;
-                  });
+                  if (val) {
+                    _requestContacts();
+                  } else {
+                    openAppSettings();
+                  }
                 },
               ),
               const SizedBox(height: 16),
@@ -91,9 +143,11 @@ class _AllPermissionsPageState extends State<AllPermissionsPage> {
                 cardColor: cardColor,
                 value: locationGranted,
                 onChanged: (val) {
-                  setState(() {
-                    locationGranted = val;
-                  });
+                  if (val) {
+                    _requestLocation();
+                  } else {
+                    openAppSettings();
+                  }
                 },
               ),
 
@@ -103,19 +157,21 @@ class _AllPermissionsPageState extends State<AllPermissionsPage> {
               SizedBox(
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ContactsPage(),
-                      ),
-                    );
+                  onPressed: () async {
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('isFirstLaunch', false);
+                    if (context.mounted) {
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        AppRoutes.home,
+                        (route) => false,
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: cardColor,
                     elevation: 6,
-                    // ignore: deprecated_member_use
-                    shadowColor: Colors.black.withOpacity(0.2),
+                    shadowColor: Colors.black.withValues(alpha: 0.2),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(32),
                     ),
@@ -152,8 +208,7 @@ class _AllPermissionsPageState extends State<AllPermissionsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            // ignore: deprecated_member_use
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

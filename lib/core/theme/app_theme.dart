@@ -8,6 +8,8 @@ class AppColors {
   static const primaryBlue = Color(0xFF0070C9);
   static const textBlue = Color(0xFF004080);
   static const dialogBackground = Color(0xFFE7EFF7);
+  static const lightBlue = Color(0xFF33A1E5);
+  static const darkBlue = Color(0xFF004080);
 }
 
 class AppFonts {

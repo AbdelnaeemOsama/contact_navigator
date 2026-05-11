@@ -1,20 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:contact_navigator/features/contacts/category_contacts_page.dart';
-
-class CategoryItem {
-  final String title;
-  final String subtitle;
-  final String iconPath;
-  final Color iconBgColor;
-
-  CategoryItem({
-    required this.title,
-    required this.subtitle,
-    required this.iconPath,
-    this.iconBgColor = const Color(0xFF33A1E5),
-  });
-}
+import 'package:contact_navigator/core/services/group_service.dart';
+import 'package:contact_navigator/core/services/voice_service.dart';
+import 'bloc/categories_bloc.dart';
+import 'bloc/categories_event.dart';
+import 'bloc/categories_state.dart';
 
 class CategoriesPage extends StatefulWidget {
   final bool isTab;
@@ -25,95 +17,122 @@ class CategoriesPage extends StatefulWidget {
 }
 
 class CategoriesPageState extends State<CategoriesPage> {
-  final List<CategoryItem> categories = [
-    CategoryItem(
-      title: 'Work',
-      subtitle: '12 contacts',
-      iconPath: 'assets/images/Categories/suitcase 1.png',
-    ),
-    CategoryItem(
-      title: 'Home',
-      subtitle: '5 contacts',
-      iconPath: 'assets/images/Categories/home (1) 1.png',
-    ),
-    CategoryItem(
-      title: 'Event',
-      subtitle: '8 contacts',
-      iconPath: 'assets/images/Categories/confetti 1.png',
-    ),
-    CategoryItem(
-      title: 'VIP Clints',
-      subtitle: '3 contacts',
-      iconPath: 'assets/images/Categories/Ellipse 7.png',
-    ),
-    CategoryItem(
-      title: 'Other',
-      subtitle: '2 contacts',
-      iconPath: 'assets/images/Categories/Ellipse 8.png',
-    ),
-  ];
-
-  List<CategoryItem> filteredCategories = [];
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    filteredCategories = categories;
+    context.read<CategoriesBloc>().add(LoadCategoriesEvent());
   }
 
   void _filterCategories(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        filteredCategories = categories;
-      } else {
-        filteredCategories = categories
-            .where((category) =>
-                category.title.toLowerCase().contains(query.toLowerCase()))
-            .toList();
-      }
-    });
-  }
-
-  void addCategory(String title) {
-    setState(() {
-      categories.add(
-        CategoryItem(
-          title: title,
-          subtitle: '0 contacts',
-          iconPath: 'assets/images/Categories/Ellipse 8.png', // Default icon
-        ),
-      );
-      _filterCategories(_searchController.text); // Refresh filtered list
-    });
+    context.read<CategoriesBloc>().add(SearchCategoriesEvent(query));
   }
 
   void showAddCategoryDialog(BuildContext context) {
     final TextEditingController controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Add New Category'),
+        title: const Text(
+          'Add New Category',
+          style: TextStyle(
+            color: AppColors.textBlue,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Enter category name',
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            filled: true,
+            fillColor: Colors.grey.shade100,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+            ),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
-              if (controller.text.isNotEmpty) {
-                addCategory(controller.text);
-                Navigator.pop(context);
+              if (controller.text.trim().isNotEmpty) {
+                context.read<CategoriesBloc>().add(AddCategoryEvent(controller.text.trim()));
+                Navigator.pop(dialogContext);
               }
             },
-            child: const Text('Add'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF33A1E5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            child: const Text('Add', style: TextStyle(color: Colors.white, fontSize: 15)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void showEditCategoryDialog(BuildContext context, Category group) {
+    final TextEditingController controller = TextEditingController(text: group.name);
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Edit Category',
+          style: TextStyle(
+            color: AppColors.textBlue,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: 'Enter category name',
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            filled: true,
+            fillColor: Colors.grey.shade100,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                context.read<CategoriesBloc>().add(
+                  UpdateCategoryEvent(group.id, controller.text.trim()),
+                );
+                Navigator.pop(dialogContext);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF33A1E5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            child: const Text('Save', style: TextStyle(color: Colors.white, fontSize: 15)),
           ),
         ],
       ),
@@ -128,6 +147,8 @@ class CategoriesPageState extends State<CategoriesPage> {
 
   @override
   Widget build(BuildContext context) {
+    const lightBlue = Color(0xFF33A1E5);
+
     Widget content = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
@@ -140,8 +161,7 @@ class CategoriesPageState extends State<CategoriesPage> {
               borderRadius: BorderRadius.circular(40),
               boxShadow: [
                 BoxShadow(
-                  // ignore: deprecated_member_use
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -151,7 +171,7 @@ class CategoriesPageState extends State<CategoriesPage> {
               controller: _searchController,
               onChanged: _filterCategories,
               decoration: InputDecoration(
-                hintText: 'Search contacts ....',
+                hintText: 'Search categories ....',
                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 16),
                 prefixIcon: Padding(
                   padding: const EdgeInsets.all(12.0),
@@ -169,91 +189,133 @@ class CategoriesPageState extends State<CategoriesPage> {
           const SizedBox(height: 32),
           // Categories List
           Expanded(
-            child: ListView.separated(
-              itemCount: filteredCategories.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 20),
-              itemBuilder: (context, index) {
-                final category = filteredCategories[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CategoryContactsPage(
-                          categoryTitle: category.title,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(50),
-                      boxShadow: [
-                        BoxShadow(
-                          // ignore: deprecated_member_use
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        // Category Icon
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: category.iconBgColor,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: Image.asset(
-                              category.iconPath,
-                              width: 30,
-                              height: 30,
+            child: BlocBuilder<CategoriesBloc, CategoriesState>(
+              builder: (context, state) {
+                if (state is CategoriesLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: lightBlue),
+                  );
+                } else if (state is CategoriesError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.error_outline_rounded,
+                              color: Colors.redAccent,
+                              size: 48,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 20),
-                        // Category Text
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                category.title,
-                                style: const TextStyle(
-                                  color: AppColors.textBlue,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                category.subtitle,
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Failed to load categories',
+                            style: TextStyle(
+                              color: AppColors.textBlue,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        // Right Arrow
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12.0),
-                          child: Image.asset(
-                            'assets/images/Categories/right-arrow (1) 3.png',
-                            width: 24,
-                            height: 24,
-                            color: Colors.grey[600],
+                          const SizedBox(height: 8),
+                          Text(
+                            state.message,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              context.read<CategoriesBloc>().add(LoadCategoriesEvent());
+                            },
+                            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                            label: const Text('Retry', style: TextStyle(color: Colors.white)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: lightBlue,
+                              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  );
+                } else if (state is CategoriesLoaded) {
+                  final groups = state.filteredGroups;
+
+                  if (groups.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.folder_open_rounded, color: lightBlue.withValues(alpha: 0.5), size: 56),
+                          const SizedBox(height: 16),
+                          Text(
+                            state.searchQuery.isNotEmpty
+                                ? 'No categories match your search'
+                                : 'No categories yet',
+                            style: TextStyle(
+                              color: AppColors.textBlue.withValues(alpha: 0.7),
+                              fontSize: 16,
+                            ),
+                          ),
+                          if (state.searchQuery.isEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap + to create one',
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.only(bottom: 100),
+                    itemCount: groups.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 20),
+                    itemBuilder: (context, index) {
+                      final group = groups[index];
+                      return _buildCategoryTile(context, group);
+                    },
+                  );
+                }
+                // CategoriesInitial
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.category_rounded, color: lightBlue, size: 48),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          context.read<CategoriesBloc>().add(LoadCategoriesEvent());
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: lightBlue,
+                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                        ),
+                        child: const Text(
+                          'Load Categories',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -294,6 +356,135 @@ class CategoriesPageState extends State<CategoriesPage> {
         ],
       ),
       body: content,
+    );
+  }
+
+  Widget _buildCategoryTile(BuildContext context, Category group) {
+    final contactCount = group.contactCount;
+    final subtitle = '$contactCount contact${contactCount == 1 ? '' : 's'}';
+
+    return Dismissible(
+      key: Key('category_${group.id}'),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('Delete Category'),
+            content: Text('Are you sure you want to delete "${group.name}"? Contacts will not be deleted.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        );
+      },
+      onDismissed: (_) {
+        context.read<CategoriesBloc>().add(DeleteCategoryEvent(group.id));
+      },
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        decoration: BoxDecoration(
+          color: Colors.redAccent,
+          borderRadius: BorderRadius.circular(50),
+        ),
+        child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
+      ),
+      child: GestureDetector(
+        onTap: () {
+          context.read<VoiceAssistantService>().speak(group.name);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CategoryContactsPage(
+                categoryTitle: group.name,
+                groupId: group.id,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(50),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Category Icon
+              Container(
+                width: 60,
+                height: 60,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF33A1E5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Icon(Icons.group_rounded, color: Colors.white, size: 28),
+                ),
+              ),
+              const SizedBox(width: 20),
+              // Category Text
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      group.name,
+                      style: const TextStyle(
+                        color: AppColors.textBlue,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Edit Icon
+              IconButton(
+                onPressed: () => showEditCategoryDialog(context, group),
+                icon: Icon(
+                  Icons.edit_outlined,
+                  size: 22,
+                  color: Colors.grey[600],
+                ),
+              ),
+              // Right Arrow
+              Padding(
+                padding: const EdgeInsets.only(right: 12.0),
+                child: Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 20,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

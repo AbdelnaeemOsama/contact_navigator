@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
-import 'package:contact_navigator/features/permissions/contacts_permissions_page.dart';
+import 'package:contact_navigator/core/routes/app_routes.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class PhonePermissionsPage extends StatelessWidget {
   const PhonePermissionsPage({super.key});
@@ -47,8 +48,7 @@ class PhonePermissionsPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      // ignore: deprecated_member_use
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 18,
                       offset: const Offset(0, 10),
                     ),
@@ -157,14 +157,15 @@ class PhonePermissionsPage extends StatelessWidget {
                                         ),
                                         Expanded(
                                           child: TextButton(
-                                            onPressed: () {
+                                            onPressed: () async {
                                               Navigator.of(dialogContext).pop();
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) =>
-                                                      const ContactsPermissionsPage(),
-                                                ),
-                                              );
+                                              await [
+                                                Permission.phone,
+                                                Permission.sms,
+                                              ].request();
+                                              if (context.mounted) {
+                                                Navigator.pushReplacementNamed(context, AppRoutes.contactsPermissions);
+                                              }
                                             },
                                             child: const Text(
                                               'Allow',
@@ -190,8 +191,7 @@ class PhonePermissionsPage extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryBlue,
                     elevation: 6,
-                    // ignore: deprecated_member_use
-                    shadowColor: Colors.black.withOpacity(0.2),
+                    shadowColor: Colors.black.withValues(alpha: 0.2),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(32),
                     ),
