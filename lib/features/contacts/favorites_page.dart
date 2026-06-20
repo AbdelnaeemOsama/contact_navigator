@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
-import 'package:contact_navigator/features/contacts/contacts_page.dart';
-import 'package:contact_navigator/features/call/call_screen.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 
 class FavoritesPage extends StatelessWidget {
   final List<Contact> favorites;
@@ -56,40 +56,77 @@ class FavoritesPage extends StatelessWidget {
   }
 
   Widget _buildGridItem(BuildContext context, Contact contact) {
+    final photo = contact.photo?.thumbnail;
+    final name = contact.displayName ?? '';
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                CallScreen(name: contact.name, imagePath: contact.imagePath),
-          ),
-        );
-      },
+      onTap: () => _makeCall(context, contact),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 35,
-            backgroundColor: contact.bgColor,
-            child: Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: ClipOval(
-                child: Image.asset(contact.imagePath, fit: BoxFit.cover),
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 38,
+              backgroundColor: Colors.white,
+              child: CircleAvatar(
+                radius: 35,
+                backgroundColor: const Color(0xFFD4E4FC).withValues(alpha: 0.5),
+                backgroundImage: photo != null ? MemoryImage(photo) : null,
+                child: photo == null
+                    ? Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                        style: const TextStyle(
+                          color: AppColors.textBlue,
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
-            contact.name,
+            name,
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: AppColors.textBlue,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _makeCall(BuildContext context, Contact contact) async {
+    final phone = contact.phones.isNotEmpty ? contact.phones.first.number : '';
+    if (phone.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This contact does not have a phone number.')),
+      );
+      return;
+    }
+
+    try {
+      await FlutterPhoneDirectCaller.callNumber(phone);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to start the phone call.')),
+        );
+      }
+    }
   }
 }

@@ -28,14 +28,15 @@ class _CallScreenState extends State<CallScreen> {
             Center(
               child: CircleAvatar(
                 radius: 60,
-                // ignore: deprecated_member_use
-                backgroundColor: lightBlue.withOpacity(0.2),
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: ClipOval(
-                    child: Image.asset(widget.imagePath, fit: BoxFit.cover),
-                  ),
-                ),
+                backgroundColor: lightBlue.withValues(alpha: 0.2),
+                child: widget.imagePath.isNotEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(4.0),
+                        child: ClipOval(
+                          child: Image.asset(widget.imagePath, fit: BoxFit.cover),
+                        ),
+                      )
+                    : const Icon(Icons.person, size: 60, color: Colors.white),
               ),
             ),
             const SizedBox(height: 24),
@@ -121,8 +122,7 @@ class _CallScreenState extends State<CallScreen> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  // ignore: deprecated_member_use
-                  color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),

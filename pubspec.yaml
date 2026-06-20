@@ -36,6 +36,24 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_native_splash: ^2.4.7
   image_picker: ^1.2.1
+  flutter_contacts: ^2.0.2
+  permission_handler: ^12.0.1
+  flutter_bloc: ^9.1.1
+  equatable: ^2.0.8
+  bloc: ^9.2.0
+  share_plus: ^13.1.0
+  url_launcher: ^6.3.2
+  flutter_tts: ^4.2.5
+  mobile_number: ^3.0.0
+  flutter_map: ^8.3.0
+  latlong2: ^0.9.1
+  geocoding: ^4.0.0
+  geolocator: ^14.0.1
+  shared_preferences: ^2.5.5
+  flutter_phone_direct_caller: ^2.2.1
+  app_links: ^7.0.0
+  uuid: ^4.5.3
+  http: ^1.2.1
 
 dev_dependencies:
   flutter_test:
@@ -75,6 +93,7 @@ flutter:
     - assets/images/add contact/
     - assets/images/Categories/
     - assets/images/icons_adreeses_page/
+    - assets/images/icons_setting/
     
 
   # An image asset can refer to one or more resolution-specific "variants", see
