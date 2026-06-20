@@ -23,7 +23,11 @@ void main() async {
 class ContactNavigatorApp extends StatelessWidget {
   final SettingsService settingsService;
   final SharedPreferences prefs;
-  const ContactNavigatorApp({super.key, required this.settingsService, required this.prefs});
+  const ContactNavigatorApp({
+    super.key,
+    required this.settingsService,
+    required this.prefs,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -39,16 +43,16 @@ class ContactNavigatorApp extends StatelessWidget {
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
-            create: (context) =>
-                ContactsBloc(
-                  context.read<IContactService>(), 
-                  context.read<SettingsService>(),
-                  context.read<IGroupService>(),
-                ),
+            create: (context) => ContactsBloc(
+              context.read<IContactService>(),
+              context.read<SettingsService>(),
+              context.read<IGroupService>(),
+            ),
           ),
           BlocProvider(
             create: (context) =>
-                CategoriesBloc(context.read<IGroupService>())..add(LoadCategoriesEvent()),
+                CategoriesBloc(context.read<IGroupService>())
+                  ..add(LoadCategoriesEvent()),
           ),
         ],
         child: const AppInitializer(),

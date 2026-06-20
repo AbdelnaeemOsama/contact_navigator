@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
@@ -160,22 +160,129 @@ class MapUtils {
     return 'https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}#map=16/${location.latitude}/${location.longitude}';
   }
 
-  /// Fetches a route from OSRM between two points
-  static Future<List<LatLng>> getRoute(LatLng start, LatLng end) async {
-    final url = 'https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson';
-    
+  static const double _walkingSpeedMps = 5.0 / 3.6;
+
+  static String _normalizeProfile(String profile) {
+    return profile == 'foot' || profile == 'walking' ? 'walking' : 'driving';
+  }
+
+  static Future<RouteInfo?> _fetchOsrmRoute(
+    LatLng start,
+    LatLng end,
+    String osrmProfile,
+    String normalizedProfile,
+  ) async {
+    final url =
+        'https://router.project-osrm.org/route/v1/$osrmProfile/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson';
+
     try {
       final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['routes'] != null && data['routes'].isNotEmpty) {
-          final coordinates = data['routes'][0]['geometry']['coordinates'] as List;
-          return coordinates.map((c) => LatLng(c[1].toDouble(), c[0].toDouble())).toList();
-        }
-      }
+      if (response.statusCode != 200) return null;
+
+      final data = json.decode(response.body);
+      if (data['routes'] == null || (data['routes'] as List).isEmpty) return null;
+
+      final route = data['routes'][0];
+      final coordinates = route['geometry']['coordinates'] as List;
+      final points = coordinates
+          .map((c) => LatLng(c[1].toDouble(), c[0].toDouble()))
+          .toList();
+      final durationSec = (route['duration'] as num).toDouble();
+      final distanceM = (route['distance'] as num).toDouble();
+
+      return RouteInfo(
+        points: points,
+        durationSeconds: durationSec,
+        distanceMeters: distanceM,
+        profile: normalizedProfile,
+      );
     } catch (e) {
-      // Ignore errors
+      return null;
     }
-    return [];
   }
+
+  static RouteInfo _withWalkingDuration(RouteInfo info) {
+    return RouteInfo(
+      points: info.points,
+      durationSeconds: info.distanceMeters / _walkingSpeedMps,
+      distanceMeters: info.distanceMeters,
+      profile: 'walking',
+    );
+  }
+
+  /// Fetches a route from OSRM between two points.
+  /// [profile] can be 'driving' or 'walking' ('foot' is also accepted).
+  static Future<RouteInfo?> getRouteWithInfo(
+    LatLng start,
+    LatLng end, {
+    String profile = 'driving',
+  }) async {
+    final normalized = _normalizeProfile(profile);
+
+    if (normalized == 'driving') {
+      return _fetchOsrmRoute(start, end, 'driving', 'driving');
+    }
+
+    var info = await _fetchOsrmRoute(start, end, 'walking', 'walking');
+    info ??= await _fetchOsrmRoute(start, end, 'foot', 'walking');
+
+    if (info == null) {
+      final driving = await _fetchOsrmRoute(start, end, 'driving', 'driving');
+      if (driving == null) return null;
+      return _withWalkingDuration(driving);
+    }
+
+    final speedKmh = info.durationSeconds > 0
+        ? (info.distanceMeters / info.durationSeconds) * 3.6
+        : 0;
+    if (speedKmh > 8) {
+      return _withWalkingDuration(info);
+    }
+
+    return info;
+  }
+
+  /// Legacy method for backward compatibility
+  static Future<List<LatLng>> getRoute(LatLng start, LatLng end) async {
+    final info = await getRouteWithInfo(start, end);
+    return info?.points ?? [];
+  }
+}
+
+class RouteInfo {
+  final List<LatLng> points;
+  final double durationSeconds;
+  final double distanceMeters;
+  final String profile;
+
+  const RouteInfo({
+    required this.points,
+    required this.durationSeconds,
+    required this.distanceMeters,
+    required this.profile,
+  });
+
+  String get formattedDuration {
+    final totalMinutes = (durationSeconds / 60).round();
+    if (totalMinutes < 60) {
+      return '$totalMinutes min';
+    }
+    final hours = totalMinutes ~/ 60;
+    final mins = totalMinutes % 60;
+    if (mins == 0) return '$hours hr';
+    return '$hours hr $mins min';
+  }
+
+  String get formattedDistance {
+    if (distanceMeters < 1000) {
+      return '${distanceMeters.round()} m';
+    }
+    final km = distanceMeters / 1000;
+    return '${km.toStringAsFixed(1)} km';
+  }
+
+  bool get isWalking => profile == 'foot' || profile == 'walking';
+
+  String get profileLabel => isWalking ? 'Walking' : 'Driving';
+  IconData get profileIcon => isWalking ? Icons.directions_walk : Icons.directions_car;
 }
