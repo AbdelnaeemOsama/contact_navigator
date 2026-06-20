@@ -139,10 +139,26 @@ class _AddContactPageState extends State<AddContactPage> {
 
   Future<void> _loadGroups() async {
     try {
-      final groups = await RepositoryProvider.of<IGroupService>(context).getGroups();
+      final groupService = RepositoryProvider.of<IGroupService>(context);
+      final groups = await groupService.getGroups();
+      
+      String? contactGroupId;
+      if (widget.contactToEdit?.id != null) {
+        for (final group in groups) {
+          final contactsInGroup = await groupService.getContactsInGroup(group.id);
+          if (contactsInGroup.any((c) => c.id == widget.contactToEdit!.id)) {
+            contactGroupId = group.id;
+            break;
+          }
+        }
+      }
+
       if (mounted) {
         setState(() {
           _availableGroups = groups;
+          if (widget.contactToEdit != null) {
+            _selectedGroupId = contactGroupId;
+          }
         });
       }
     } catch (e) {

@@ -8,6 +8,8 @@ import 'package:contact_navigator/features/contacts/bloc/contacts_bloc.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_event.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_state.dart';
 import 'package:contact_navigator/features/contacts/add_contact_page.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:contact_navigator/core/utils/map_utils.dart';
 
 /// Space for [CustomBottomNav] (margin + height) so keypad keys are not under the bar.
 double _keypadBottomInset(BuildContext context) {
@@ -36,7 +38,8 @@ class _KeypadSuggestion {
 }
 
 class KeypadPage extends StatefulWidget {
-  const KeypadPage({super.key});
+  final void Function(LatLng location)? onNavigateToMap;
+  const KeypadPage({super.key, this.onNavigateToMap});
 
   @override
   State<KeypadPage> createState() => _KeypadPageState();
@@ -312,6 +315,7 @@ class _KeypadPageState extends State<KeypadPage> {
               clipBehavior: Clip.antiAlias,
               child: ListView.separated(
                 shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 padding: EdgeInsets.zero,
                 itemCount: items.length,
                 separatorBuilder: (context, index) => const Divider(height: 1),
@@ -319,47 +323,82 @@ class _KeypadPageState extends State<KeypadPage> {
                   final item = items[i];
                   final name = item.contact.displayName ?? 'Unknown';
                   final photo = item.contact.photo?.thumbnail;
-                  return ListTile(
-                    dense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.12),
-                      backgroundImage: photo != null ? MemoryImage(photo) : null,
-                      child: photo == null
-                          ? Text(
-                              name.isNotEmpty ? name[0].toUpperCase() : '?',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textBlue,
-                              ),
-                            )
-                          : null,
-                    ),
-                    title: Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                        color: AppColors.textBlue,
-                      ),
-                    ),
-                    subtitle: Text(
-                      item.phone.number,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-                    ),
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _dialedNumber = item.dialFieldValue);
+                  return Dismissible(
+                    key: Key('keypad_suggestion_${item.contact.id ?? name}_${item.phone.number}_$i'),
+                    direction: DismissDirection.horizontal,
+                    confirmDismiss: (direction) async {
+                      if (direction == DismissDirection.startToEnd) {
+                        await _makeCall(item.phone.number);
+                      } else if (direction == DismissDirection.endToStart) {
+                        final link = item.contact.websites.isNotEmpty ? item.contact.websites.first.url : '';
+                        var latLng = MapUtils.parseLocationLink(link);
+                        if (latLng == null && item.contact.addresses.isNotEmpty) {
+                          latLng = MapUtils.parseLocationLink(item.contact.addresses.first.formatted ?? '');
+                        }
+                        if (latLng != null) {
+                          widget.onNavigateToMap?.call(latLng);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('No location saved for this contact')),
+                          );
+                        }
+                      }
+                      return false;
                     },
-                    trailing: IconButton(
-                      tooltip: 'Call',
-                      icon: const Icon(Icons.call, color: Colors.green),
-                      onPressed: () => _makeCall(item.phone.number),
+                    background: Container(
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      color: Colors.green.shade100,
+                      child: const Icon(Icons.phone_enabled_rounded, color: Colors.green),
+                    ),
+                    secondaryBackground: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      color: Colors.blue.shade100,
+                      child: const Icon(Icons.location_on_rounded, color: Colors.blue),
+                    ),
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.12),
+                        backgroundImage: photo != null ? MemoryImage(photo) : null,
+                        child: photo == null
+                            ? Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textBlue,
+                                ),
+                              )
+                            : null,
+                      ),
+                      title: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: AppColors.textBlue,
+                        ),
+                      ),
+                      subtitle: Text(
+                        item.phone.number,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                      ),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _dialedNumber = item.dialFieldValue);
+                      },
+                      trailing: IconButton(
+                        tooltip: 'Call',
+                        icon: const Icon(Icons.call, color: Colors.green),
+                        onPressed: () => _makeCall(item.phone.number),
+                      ),
                     ),
                   );
                 },

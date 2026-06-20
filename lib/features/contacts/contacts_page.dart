@@ -16,6 +16,7 @@ import 'widgets/contacts_search_bar.dart';
 import 'widgets/contacts_favorites_section.dart';
 import 'package:contact_navigator/core/widgets/custom_bottom_nav.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:contact_navigator/core/services/settings_service.dart';
 
 class ContactsPage extends StatefulWidget {
   const ContactsPage({super.key});
@@ -118,7 +119,8 @@ class _ContactsPageState extends State<ContactsPage> {
   }
 
   Widget _buildContactsList(ContactsLoaded state, Color lightBlue) {
-    final favorites = state.allContacts.where((c) => c.android?.isFavorite ?? false).toList();
+    final settingsService = context.read<SettingsService>();
+    final favorites = state.allContacts.where((c) => settingsService.isFavorite(c.id ?? '')).toList();
     
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -175,16 +177,27 @@ class _ContactsPageState extends State<ContactsPage> {
   Widget build(BuildContext context) {
     const lightBlue = Color(0xFF33A1E5);
 
-    return Scaffold(
-      extendBody: true,
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: _buildBody(lightBlue),
-      ),
-      floatingActionButton: _buildFab(lightBlue),
-      bottomNavigationBar: CustomBottomNav(
-        selectedIndex: _selectedIndex,
-        onItemSelected: (index) => setState(() => _selectedIndex = index),
+    return PopScope(
+      canPop: _selectedIndex == 0,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+        }
+      },
+      child: Scaffold(
+        extendBody: true,
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: _buildBody(lightBlue),
+        ),
+        floatingActionButton: _buildFab(lightBlue),
+        bottomNavigationBar: CustomBottomNav(
+          selectedIndex: _selectedIndex,
+          onItemSelected: (index) => setState(() => _selectedIndex = index),
+        ),
       ),
     );
   }
@@ -216,7 +229,15 @@ class _ContactsPageState extends State<ContactsPage> {
   Widget _buildBody(Color lightBlue) {
     switch (_selectedIndex) {
       case 0: return _buildContactsTab(lightBlue);
-      case 1: return const KeypadPage();
+      case 1:
+        return KeypadPage(
+          onNavigateToMap: (latLng) {
+            setState(() {
+              _mapFocusLocation = latLng;
+              _selectedIndex = 2;
+            });
+          },
+        );
       case 2: return MapTab(key: ValueKey(_mapFocusLocation), focusLocation: _mapFocusLocation);
       case 3: return CategoriesPage(key: _categoriesKey);
       case 4: return const SettingsPage(isTab: true);

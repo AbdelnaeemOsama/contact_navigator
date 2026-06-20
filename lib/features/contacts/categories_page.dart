@@ -472,6 +472,37 @@ class CategoriesPageState extends State<CategoriesPage> {
                   color: Colors.grey[600],
                 ),
               ),
+              // Delete Icon
+              IconButton(
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      title: const Text('Delete Category'),
+                      content: Text('Are you sure you want to delete "${group.name}"? Contacts will not be deleted.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirm == true && context.mounted) {
+                    context.read<CategoriesBloc>().add(DeleteCategoryEvent(group.id));
+                  }
+                },
+                icon: Icon(
+                  Icons.delete_outline,
+                  size: 22,
+                  color: Colors.red[400],
+                ),
+              ),
               // Right Arrow
               Padding(
                 padding: const EdgeInsets.only(right: 12.0),

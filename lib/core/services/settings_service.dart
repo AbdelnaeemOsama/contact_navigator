@@ -40,4 +40,28 @@ class SettingsService {
   Future<void> setVoiceEnabled(bool enabled) async {
     await _prefs.setBool(_keyVoiceEnabled, enabled);
   }
+
+  static const String _keyFavorites = 'favorites_ids';
+
+  List<String> getFavoriteIds() {
+    return _prefs.getStringList(_keyFavorites) ?? [];
+  }
+
+  Future<void> setFavoriteIds(List<String> ids) async {
+    await _prefs.setStringList(_keyFavorites, ids);
+  }
+
+  bool isFavorite(String contactId) {
+    return getFavoriteIds().contains(contactId);
+  }
+
+  Future<void> toggleFavorite(String contactId) async {
+    final list = getFavoriteIds().toList();
+    if (list.contains(contactId)) {
+      list.remove(contactId);
+    } else {
+      list.add(contactId);
+    }
+    await setFavoriteIds(list);
+  }
 }

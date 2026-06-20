@@ -129,6 +129,7 @@ class ContactService implements IContactService {
         phones: contact.phones,
         emails: contact.emails,
         addresses: contact.addresses,
+        websites: contact.websites,
         notes: contact.notes,
         photo: contact.photo,
         // The copyWith on Contact preserves 'android' and 'metadata' by default

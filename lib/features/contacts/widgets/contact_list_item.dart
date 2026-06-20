@@ -11,6 +11,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:typed_data';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:contact_navigator/core/services/settings_service.dart';
 
 class ContactListItem extends StatelessWidget {
   final int index;
@@ -50,7 +51,10 @@ class ContactListItem extends StatelessWidget {
           await _makeCall(context, phone);
         } else if (direction == DismissDirection.endToStart) {
           final link = contact.websites.isNotEmpty ? contact.websites.first.url : '';
-          final latLng = MapUtils.parseLocationLink(link);
+          var latLng = MapUtils.parseLocationLink(link);
+          if (latLng == null && contact.addresses.isNotEmpty) {
+            latLng = MapUtils.parseLocationLink(contact.addresses.first.formatted ?? '');
+          }
           if (latLng != null) {
             onNavigateToMap?.call(latLng);
           } else {
@@ -203,6 +207,13 @@ class ContactListItem extends StatelessWidget {
                             .map((w) => MapUtils.parseLocationLink(w.url))
                             .where((loc) => loc != null)
                             .toList();
+
+                        if (validLocations.isEmpty) {
+                          for (final addr in contact.addresses) {
+                            final loc = MapUtils.parseLocationLink(addr.formatted ?? '');
+                            if (loc != null) validLocations.add(loc);
+                          }
+                        }
 
                         if (validLocations.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -424,14 +435,17 @@ class _FavoriteButtonState extends State<_FavoriteButton> {
   @override
   void initState() {
     super.initState();
-    _isFav = widget.contact.android?.isFavorite ?? false;
+    _isFav = context.read<SettingsService>().isFavorite(widget.contact.id ?? '');
   }
 
   @override
   void didUpdateWidget(_FavoriteButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.contact.android?.isFavorite != widget.contact.android?.isFavorite) {
-      _isFav = widget.contact.android?.isFavorite ?? false;
+    final settings = context.read<SettingsService>();
+    final oldFav = settings.isFavorite(oldWidget.contact.id ?? '');
+    final newFav = settings.isFavorite(widget.contact.id ?? '');
+    if (oldFav != newFav) {
+      _isFav = newFav;
     }
   }
 

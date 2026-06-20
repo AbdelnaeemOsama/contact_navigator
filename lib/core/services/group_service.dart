@@ -24,6 +24,7 @@ abstract class IGroupService {
   Future<List<Contact>> getContactsInGroup(String groupId, {List<Contact>? allContacts});
   Future<void> addContactToGroup(String contactId, String groupId);
   Future<void> removeContactFromGroup(String contactId, String groupId);
+  Future<void> removeContactFromAllGroups(String contactId);
   Future<void> updateGroup(String groupId, String newName);
 }
 
@@ -127,6 +128,22 @@ class GroupService implements IGroupService {
     if (list.contains(contactId)) {
       list.remove(contactId);
       mapping[groupId] = list;
+      await _saveMapping(mapping);
+      _notifyListeners();
+    }
+  }
+
+  @override
+  Future<void> removeContactFromAllGroups(String contactId) async {
+    final mapping = await _loadMapping();
+    bool changed = false;
+    mapping.forEach((groupId, list) {
+      if (list.contains(contactId)) {
+        list.remove(contactId);
+        changed = true;
+      }
+    });
+    if (changed) {
       await _saveMapping(mapping);
       _notifyListeners();
     }

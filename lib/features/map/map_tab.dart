@@ -88,6 +88,8 @@ class _MapTabState extends State<MapTab> {
         });
         if (widget.focusLocation == null) {
           _mapController.move(_currentLocation!, 15);
+        } else {
+          _getDirectionsToLatLng(widget.focusLocation!);
         }
       }
     } catch (e) {
@@ -396,6 +398,26 @@ class _MapTabState extends State<MapTab> {
         Navigator.pop(context); 
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not find a route.')));
+      }
+    }
+  }
+
+  Future<void> _getDirectionsToLatLng(LatLng dest) async {
+    if (_currentLocation == null) return;
+    setState(() => _isRouting = true);
+    final route = await MapUtils.getRoute(_currentLocation!, dest);
+    if (mounted) {
+      setState(() {
+        _routePoints = route;
+        _isRouting = false;
+        _focusedLocation = dest;
+      });
+      if (route.isNotEmpty) {
+        _mapController.move(dest, 14);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not find a route.')),
+        );
       }
     }
   }

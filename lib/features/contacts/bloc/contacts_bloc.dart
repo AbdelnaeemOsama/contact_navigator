@@ -207,9 +207,12 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     try {
       await _contactService.updateContact(event.contact);
 
-      if (event.groupId != null && event.contact.id != null) {
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-        await _groupService.addContactToGroup(event.contact.id!, event.groupId!);
+      if (event.contact.id != null) {
+        await _groupService.removeContactFromAllGroups(event.contact.id!);
+        if (event.groupId != null) {
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+          await _groupService.addContactToGroup(event.contact.id!, event.groupId!);
+        }
       }
 
       await _reloadAfterMutation(
@@ -242,7 +245,14 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     Emitter<ContactsState> emit,
   ) async {
     try {
-      await _contactService.toggleFavorite(event.contact);
+      if (event.contact.id != null) {
+        await _settingsService.toggleFavorite(event.contact.id!);
+      }
+      try {
+        await _contactService.toggleFavorite(event.contact);
+      } catch (e) {
+        debugPrint('Native toggle favorite failed: $e');
+      }
       await _reloadAfterMutation(emit);
     } catch (e) {
       emit(ContactsError('Failed to toggle favorite: ${e.toString()}'));
