@@ -18,8 +18,8 @@ class CustomBottomNav extends StatelessWidget {
     return Container(
       width: isTablet ? 500 : screenWidth,
       margin: EdgeInsets.only(
-        left: isTablet ? (screenWidth - 500) / 2 : 20,
-        right: isTablet ? (screenWidth - 500) / 2 : 20,
+        left: isTablet ? (screenWidth - 500) / 2 : 12,
+        right: isTablet ? (screenWidth - 500) / 2 : 12,
         bottom: 25,
       ),
       height: 80,
@@ -53,38 +53,45 @@ class CustomBottomNav extends StatelessWidget {
     const activeColor = Color(0xFF33A1E5);
     final inactiveColor = Colors.grey.shade400;
 
-    return GestureDetector(
-      onTap: () {
-        if (!isSelected) {
-          onItemSelected(index);
-          Feedback.forTap(context);
-        }
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? activeColor.withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? activeColor : inactiveColor,
-              size: 24,
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          if (!isSelected) {
+            onItemSelected(index);
+            Feedback.forTap(context);
+          }
+        },
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? activeColor.withValues(alpha: 0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(18),
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? activeColor : inactiveColor,
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? activeColor : inactiveColor,
+                  size: 24,
+                ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected ? activeColor : inactiveColor,
+                      fontSize: 10,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -14,7 +14,7 @@ import 'package:contact_navigator/core/utils/map_utils.dart';
 /// Space for [CustomBottomNav] (margin + height) so keypad keys are not under the bar.
 double _keypadBottomInset(BuildContext context) {
   final safe = MediaQuery.paddingOf(context).bottom;
-  return safe + 110;
+  return safe + 95;
 }
 
 class _KeypadSuggestion {
@@ -204,16 +204,18 @@ class _KeypadPageState extends State<KeypadPage> {
   Widget build(BuildContext context) {
     final bottom = _keypadBottomInset(context);
 
-    return SingleChildScrollView(
+    return Padding(
       padding: EdgeInsets.only(bottom: bottom),
       child: Column(
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           _buildNumberDisplayWithAdd(),
-          _buildAutocompleteSuggestions(),
-          const SizedBox(height: 12),
+          Flexible(
+            child: _buildAutocompleteSuggestions(),
+          ),
+          const SizedBox(height: 8),
           _buildKeypadGrid(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           _buildActionButtons(),
         ],
       ),
@@ -304,104 +306,122 @@ class _KeypadPageState extends State<KeypadPage> {
         }
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 220),
-            child: Material(
-              color: Colors.white,
-              elevation: 1,
-              shadowColor: Colors.black26,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1C1C1E), // Dark card background like black image
               borderRadius: BorderRadius.circular(16),
-              clipBehavior: Clip.antiAlias,
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                itemCount: items.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, i) {
-                  final item = items[i];
-                  final name = item.contact.displayName ?? 'Unknown';
-                  final photo = item.contact.photo?.thumbnail;
-                  return Dismissible(
-                    key: Key('keypad_suggestion_${item.contact.id ?? name}_${item.phone.number}_$i'),
-                    direction: DismissDirection.horizontal,
-                    confirmDismiss: (direction) async {
-                      if (direction == DismissDirection.startToEnd) {
-                        await _makeCall(item.phone.number);
-                      } else if (direction == DismissDirection.endToStart) {
-                        final link = item.contact.websites.isNotEmpty ? item.contact.websites.first.url : '';
-                        var latLng = MapUtils.parseLocationLink(link);
-                        if (latLng == null && item.contact.addresses.isNotEmpty) {
-                          latLng = MapUtils.parseLocationLink(item.contact.addresses.first.formatted ?? '');
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 160),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: items.length,
+                  separatorBuilder: (context, index) => const Divider(
+                    color: Colors.white10,
+                    height: 1,
+                    indent: 16,
+                    endIndent: 16,
+                  ),
+                  itemBuilder: (context, i) {
+                    final item = items[i];
+                    final name = item.contact.displayName ?? 'Unknown';
+                    
+                    return Dismissible(
+                      key: Key('keypad_suggestion_${item.contact.id ?? name}_${item.phone.number}_$i'),
+                      direction: DismissDirection.horizontal,
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          await _makeCall(item.phone.number);
+                        } else if (direction == DismissDirection.endToStart) {
+                          final link = item.contact.websites.isNotEmpty ? item.contact.websites.first.url : '';
+                          var latLng = MapUtils.parseLocationLink(link);
+                          if (latLng == null && item.contact.addresses.isNotEmpty) {
+                            latLng = MapUtils.parseLocationLink(item.contact.addresses.first.formatted ?? '');
+                          }
+                          if (latLng != null) {
+                            widget.onNavigateToMap?.call(latLng);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('No location saved for this contact')),
+                            );
+                          }
                         }
-                        if (latLng != null) {
-                          widget.onNavigateToMap?.call(latLng);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('No location saved for this contact')),
-                          );
-                        }
-                      }
-                      return false;
-                    },
-                    background: Container(
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      color: Colors.green.shade100,
-                      child: const Icon(Icons.phone_enabled_rounded, color: Colors.green),
-                    ),
-                    secondaryBackground: Container(
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      color: Colors.blue.shade100,
-                      child: const Icon(Icons.location_on_rounded, color: Colors.blue),
-                    ),
-                    child: ListTile(
-                      dense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                      leading: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.12),
-                        backgroundImage: photo != null ? MemoryImage(photo) : null,
-                        child: photo == null
-                            ? Text(
-                                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textBlue,
-                                ),
-                              )
-                            : null,
+                        return false;
+                      },
+                      background: Container(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        color: Colors.green.withValues(alpha: 0.2),
+                        child: const Icon(Icons.phone_enabled_rounded, color: Colors.green),
                       ),
-                      title: Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                          color: AppColors.textBlue,
+                      secondaryBackground: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        color: Colors.blue.withValues(alpha: 0.2),
+                        child: const Icon(Icons.location_on_rounded, color: Colors.blue),
+                      ),
+                      child: InkWell(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _dialedNumber = item.dialFieldValue);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.account_circle_outlined,
+                                color: Colors.white70,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                item.phone.number,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              GestureDetector(
+                                onTap: () => _makeCall(item.phone.number),
+                                child: const Icon(
+                                  Icons.phone,
+                                  color: Colors.green,
+                                  size: 18,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      subtitle: Text(
-                        item.phone.number,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-                      ),
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _dialedNumber = item.dialFieldValue);
-                      },
-                      trailing: IconButton(
-                        tooltip: 'Call',
-                        icon: const Icon(Icons.call, color: Colors.green),
-                        onPressed: () => _makeCall(item.phone.number),
-                      ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -416,11 +436,11 @@ class _KeypadPageState extends State<KeypadPage> {
       child: Column(
         children: [
           _buildRow(['1', '2', '3']),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           _buildRow(['4', '5', '6']),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           _buildRow(['7', '8', '9']),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           _buildRow(['*', '0', '#']),
         ],
       ),
@@ -443,14 +463,14 @@ class _KeypadPageState extends State<KeypadPage> {
               customBorder: const CircleBorder(),
               onTap: _isCalling ? null : () => _makeCall(),
               child: SizedBox(
-                width: 76,
-                height: 76,
+                width: 70,
+                height: 70,
                 child: _isCalling
                     ? const Padding(
-                        padding: EdgeInsets.all(22),
+                        padding: EdgeInsets.all(20),
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                       )
-                    : const Icon(Icons.phone, color: Colors.white, size: 36),
+                    : const Icon(Icons.phone, color: Colors.white, size: 32),
               ),
             ),
           ),
@@ -510,39 +530,51 @@ class _KeypadPageState extends State<KeypadPage> {
         break;
     }
 
-    return Material(
-      color: Colors.grey.withValues(alpha: 0.12),
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: () => _onNumberTapped(label),
-        onLongPress: label == '0' ? () => _onNumberLongPressed(label) : null,
-        child: SizedBox(
-          width: 72,
-          height: 72,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.textBlue,
-                ),
-              ),
-              if (subLabel.isNotEmpty)
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.white,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => _onNumberTapped(label),
+          onLongPress: label == '0' ? () => _onNumberLongPressed(label) : null,
+          child: SizedBox(
+            width: 70,
+            height: 70,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
                 Text(
-                  subLabel,
+                  label,
                   style: const TextStyle(
-                    fontSize: 9,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w400,
                     color: AppColors.textBlue,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
                   ),
                 ),
-            ],
+                if (subLabel.isNotEmpty)
+                  Text(
+                    subLabel,
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: AppColors.textBlue,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 
 class MapSearchBar extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final Function(String) onSubmitted;
   final bool isSearching;
   final VoidCallback onClear;
   final VoidCallback onChanged;
+  final bool enabled;
 
   const MapSearchBar({
     super.key,
     required this.controller,
+    this.focusNode,
     required this.onSubmitted,
     required this.isSearching,
     required this.onClear,
     required this.onChanged,
+    this.enabled = true,
   });
 
   @override
@@ -32,10 +36,12 @@ class MapSearchBar extends StatelessWidget {
       ),
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
+        enabled: enabled,
         textInputAction: TextInputAction.search,
         onSubmitted: onSubmitted,
         decoration: InputDecoration(
-          hintText: 'Search for a place...',
+          hintText: 'Search for a contact or place...',
           hintStyle: const TextStyle(color: Colors.grey, fontSize: 16),
           prefixIcon: const Icon(Icons.search, color: Color(0xFF33A1E5)),
           suffixIcon: isSearching
