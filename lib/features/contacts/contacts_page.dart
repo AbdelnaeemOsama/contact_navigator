@@ -45,6 +45,17 @@ class _ContactsPageState extends State<ContactsPage> {
     context.read<ContactsBloc>().add(SearchContactsEvent(query));
   }
 
+  void _navigateToMap(LatLng latLng) {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        setState(() {
+          _mapFocusLocation = latLng;
+          _selectedIndex = 2;
+        });
+      }
+    });
+  }
+
   Widget _buildContactsTab(Color lightBlue) {
     return BlocListener<ContactsBloc, ContactsState>(
       listenWhen: (previous, current) {
@@ -155,12 +166,7 @@ class _ContactsPageState extends State<ContactsPage> {
               context.read<VoiceAssistantService>().speak(contact.displayName ?? '');
             }
           },
-          onNavigateToMap: (latLng) {
-            setState(() {
-              _mapFocusLocation = latLng;
-              _selectedIndex = 2;
-            });
-          },
+          onNavigateToMap: _navigateToMap,
         );
       },
     );
@@ -231,12 +237,7 @@ class _ContactsPageState extends State<ContactsPage> {
       case 0: return _buildContactsTab(lightBlue);
       case 1:
         return KeypadPage(
-          onNavigateToMap: (latLng) {
-            setState(() {
-              _mapFocusLocation = latLng;
-              _selectedIndex = 2;
-            });
-          },
+          onNavigateToMap: _navigateToMap,
         );
       case 2: return MapTab(key: ValueKey(_mapFocusLocation), focusLocation: _mapFocusLocation);
       case 3: return CategoriesPage(key: _categoriesKey);
