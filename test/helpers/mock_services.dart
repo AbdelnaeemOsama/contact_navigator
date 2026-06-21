@@ -5,7 +5,6 @@ import 'package:contact_navigator/core/services/group_service.dart';
 import 'package:contact_navigator/core/services/settings_service.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_state.dart';
 import 'dart:async';
-import 'dart:typed_data';
 
 class MockContactService extends Mock implements IContactService {}
 
