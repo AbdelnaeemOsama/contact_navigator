@@ -21,7 +21,6 @@ class GroupContactsBloc extends Bloc<GroupContactsEvent, GroupContactsState> {
     LoadGroupContactsEvent event,
     Emitter<GroupContactsState> emit,
   ) async {
-    emit(GroupContactsLoading());
     try {
       final contactsState = _contactsBloc.state;
       final allLoaded = contactsState is ContactsLoaded ? contactsState.allContacts : null;

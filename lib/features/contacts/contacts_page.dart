@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:contact_navigator/features/contacts/add_contact_page.dart';
@@ -29,20 +30,24 @@ class _ContactsPageState extends State<ContactsPage> {
   int _selectedIndex = 0;
   int? _expandedIndex;
   LatLng? _mapFocusLocation;
+  bool _mapVisited = false;
+  Timer? _searchDebounce;
 
   final GlobalKey<CategoriesPageState> _categoriesKey = GlobalKey<CategoriesPageState>();
 
   @override
-  void initState() {
-    super.initState();
-    context.read<ContactsBloc>().add(LoadContactsEvent());
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 
   void _onSearchQueryChanged(String query) {
-    setState(() {
-      _expandedIndex = null;
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      setState(() => _expandedIndex = null);
+      context.read<ContactsBloc>().add(SearchContactsEvent(query));
     });
-    context.read<ContactsBloc>().add(SearchContactsEvent(query));
   }
 
   void _navigateToMap(LatLng latLng) {
@@ -80,6 +85,16 @@ class _ContactsPageState extends State<ContactsPage> {
         context.read<ContactsBloc>().add(const ClearContactsSnackBarEvent());
       },
       child: BlocBuilder<ContactsBloc, ContactsState>(
+        buildWhen: (previous, current) {
+          if (previous.runtimeType != current.runtimeType) return true;
+          if (current is ContactsLoaded && previous is ContactsLoaded) {
+            return previous.filteredContacts != current.filteredContacts ||
+                previous.favoriteIds != current.favoriteIds ||
+                previous.nameFormat != current.nameFormat ||
+                previous.sortOrder != current.sortOrder;
+          }
+          return true;
+        },
         builder: (context, state) {
           if (state is ContactsError) {
             return _buildErrorState(state.message, lightBlue);
@@ -113,6 +128,7 @@ class _ContactsPageState extends State<ContactsPage> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      cacheExtent: 400,
       itemCount: state.filteredContacts.length + 4,
       itemBuilder: (context, index) {
         if (index == 0) {
@@ -131,10 +147,12 @@ class _ContactsPageState extends State<ContactsPage> {
         final contactIndex = index - 3;
         final contact = state.filteredContacts[contactIndex];
         return ContactListItem(
+          key: ValueKey(contact.id ?? 'contact_$contactIndex'),
           index: contactIndex,
           contact: contact,
           bgColor: _getContactColor(contact.displayName ?? ''),
           nameFormat: state.nameFormat,
+          isFavorite: state.favoriteIds.contains(contact.id),
           isExpanded: _expandedIndex == contactIndex,
           onTap: () {
             setState(() {
@@ -181,7 +199,10 @@ class _ContactsPageState extends State<ContactsPage> {
         floatingActionButton: _buildFab(lightBlue),
         bottomNavigationBar: CustomBottomNav(
           selectedIndex: _selectedIndex,
-          onItemSelected: (index) => setState(() => _selectedIndex = index),
+          onItemSelected: (index) => setState(() {
+            _selectedIndex = index;
+            if (index == 2) _mapVisited = true;
+          }),
         ),
       ),
     );
@@ -212,17 +233,21 @@ class _ContactsPageState extends State<ContactsPage> {
   }
 
   Widget _buildBody(Color lightBlue) {
-    switch (_selectedIndex) {
-      case 0: return _buildContactsTab(lightBlue);
-      case 1:
-        return KeypadPage(
-          onNavigateToMap: _navigateToMap,
-        );
-      case 2: return MapTab(key: ValueKey(_mapFocusLocation), focusLocation: _mapFocusLocation);
-      case 3: return CategoriesPage(key: _categoriesKey);
-      case 4: return const SettingsPage(isTab: true);
-      default: return _buildContactsTab(lightBlue);
-    }
+    return IndexedStack(
+      index: _selectedIndex,
+      children: [
+        _buildContactsTab(lightBlue),
+        KeypadPage(onNavigateToMap: _navigateToMap),
+        _mapVisited
+            ? MapTab(
+                key: ValueKey(_mapFocusLocation),
+                focusLocation: _mapFocusLocation,
+              )
+            : const SizedBox.shrink(),
+        CategoriesPage(key: _categoriesKey),
+        const SettingsPage(isTab: true),
+      ],
+    );
   }
 
   Widget _buildErrorState(String message, Color lightBlue) {

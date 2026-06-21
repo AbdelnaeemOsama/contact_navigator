@@ -15,8 +15,8 @@ void main() {
     // SplashScreen should be showing
     expect(find.byType(ContactNavigatorApp), findsOneWidget);
 
-    // Advance past the 3-second splash timer
-    await tester.pump(const Duration(seconds: 4));
+    // Splash navigates immediately after prefs load
+    await tester.pumpAndSettle();
 
     // Should have navigated without errors
     expect(tester.takeException(), isNull);
@@ -29,7 +29,7 @@ void main() {
 
     await tester.pumpWidget(ContactNavigatorApp(settingsService: settingsService, prefs: prefs));
 
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
   });

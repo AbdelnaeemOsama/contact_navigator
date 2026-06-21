@@ -58,7 +58,11 @@ class ContactService implements IContactService {
     }
 
     return await FlutterContacts.getAll(
-      properties: withProperties ? ContactProperties.all : ContactProperties.none,
+      properties: withProperties
+          ? (withPhoto
+              ? ContactProperties.all
+              : ContactProperties.allProperties)
+          : ContactProperties.none,
       filter: filter,
     );
   }

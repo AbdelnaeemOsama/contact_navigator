@@ -5,6 +5,7 @@ import 'package:contact_navigator/core/services/contact_service.dart';
 import 'package:contact_navigator/core/services/group_service.dart';
 import 'package:contact_navigator/core/services/voice_service.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_bloc.dart';
+import 'package:contact_navigator/features/contacts/bloc/contacts_event.dart';
 import 'package:contact_navigator/features/contacts/bloc/categories_bloc.dart';
 import 'package:contact_navigator/features/contacts/bloc/categories_event.dart';
 import 'package:contact_navigator/core/routes/app_routes.dart';
@@ -47,7 +48,7 @@ class ContactNavigatorApp extends StatelessWidget {
               context.read<IContactService>(),
               context.read<SettingsService>(),
               context.read<IGroupService>(),
-            ),
+            )..add(const LoadContactsEvent()),
           ),
           BlocProvider(
             create: (context) =>
