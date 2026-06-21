@@ -16,9 +16,9 @@ class VoiceAssistantBloc
   VoiceAssistantBloc({
     required VoiceCommandService service,
     required ContactsBloc contactsBloc,
-  })  : _service = service,
-        _contactsBloc = contactsBloc,
-        super(VoiceAssistantIdle()) {
+  }) : _service = service,
+       _contactsBloc = contactsBloc,
+       super(VoiceAssistantIdle()) {
     on<StartListeningEvent>(_onStartListening);
     on<StopListeningEvent>(_onStopListening);
     on<SpeechResultEvent>(_onSpeechResult);
@@ -62,7 +62,9 @@ class VoiceAssistantBloc
     final parsed = _service.parseIntent(event.text);
 
     if (parsed.intent == VoiceIntent.unknown || parsed.contactName == null) {
-      await _service.speak('مش فاهم. قول مثلاً: "اتصل بأحمد" أو "روح عند مريم"');
+      await _service.speak(
+        'لم أفهم الأمر. يمكنك قول اتصل بـ أو اذهب إلى متبوعاً بالاسم',
+      );
       emit(VoiceAssistantUnknownIntent(event.text));
       return;
     }
@@ -101,10 +103,7 @@ class VoiceAssistantBloc
     emit(VoiceAssistantIdle());
   }
 
-  void _onReset(
-    ResetAssistantEvent event,
-    Emitter<VoiceAssistantState> emit,
-  ) {
+  void _onReset(ResetAssistantEvent event, Emitter<VoiceAssistantState> emit) {
     _service.stopListening();
     emit(VoiceAssistantIdle());
   }

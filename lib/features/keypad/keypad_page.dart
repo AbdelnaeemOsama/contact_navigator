@@ -213,22 +213,59 @@ class _KeypadPageState extends State<KeypadPage> {
     final bottom = _keypadBottomInset(context);
     final screenWidth = MediaQuery.sizeOf(context).width;
 
+    final hasQuery = _dialedNumber.replaceAll(RegExp(r'\D'), '').isNotEmpty ||
+        _dialedNumber.contains('+');
+
     const sidePad = 24.0;
     const colGap = 18.0;
-    const rowGap = 14.0;
-    final keySize = ((screenWidth - sidePad * 2 - colGap * 2) / 3).clamp(64.0, 82.0);
+    const numRows = 5; // 4 digit rows + bottom action row
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
-          SizedBox(height: 56, child: _buildNumberDisplayWithAdd()),
-          SizedBox(height: 120, child: _buildAutocompleteSuggestions()),
-          const Spacer(),
-          _buildIosKeypad(keySize, sidePad, colGap, rowGap),
-          const SizedBox(height: 8),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Fixed heights
+          const topPad = 8.0;
+          const numDisplayH = 52.0;
+          const numDisplayGap = 4.0;
+          final suggestionsH = hasQuery ? 110.0 : 0.0;
+          const suggToKeyGap = 8.0;
+          const bottomPad = 4.0;
+
+          // All space that goes to the keypad
+          final chrome = topPad + numDisplayH + numDisplayGap +
+              suggestionsH + suggToKeyGap + bottomPad;
+          final keypadAvail =
+              (constraints.maxHeight - chrome).clamp(0.0, double.infinity);
+
+          // Max key width from screen width
+          final maxKeyFromWidth =
+              ((screenWidth - sidePad * 2 - colGap * 2) / 3).clamp(52.0, 90.0);
+
+          // Distribute keypadAvail across 5 rows and 4 gaps
+          // Start with a modest gap and solve for keySize
+          const minGap = 6.0;
+          const maxGap = 22.0;
+          final rawKey = (keypadAvail - (numRows - 1) * minGap) / numRows;
+          final keySize = rawKey.clamp(52.0, maxKeyFromWidth);
+          final rowGap =
+              ((keypadAvail - numRows * keySize) / (numRows - 1)).clamp(
+                  minGap, maxGap);
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: topPad),
+              SizedBox(height: numDisplayH, child: _buildNumberDisplayWithAdd()),
+              const SizedBox(height: numDisplayGap),
+              if (hasQuery)
+                SizedBox(height: suggestionsH, child: _buildAutocompleteSuggestions()),
+              const SizedBox(height: suggToKeyGap),
+              _buildIosKeypad(keySize, sidePad, colGap, rowGap),
+              const SizedBox(height: bottomPad),
+            ],
+          );
+        },
       ),
     );
   }
@@ -329,6 +366,8 @@ class _KeypadPageState extends State<KeypadPage> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 itemCount: items.length,
                 separatorBuilder: (context, index) => const Divider(

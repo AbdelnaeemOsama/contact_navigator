@@ -266,17 +266,30 @@ class _MapTabState extends State<MapTab> {
     );
   }
 
+  /// Returns the first valid LatLng for the contact (used for search checks).
   LatLng? _getContactLocation(Contact contact) {
-    for (var address in contact.addresses) {
-      final link = contact.websites.isNotEmpty
-          ? contact.websites.first.url
-          : '';
-      final parsed = MapUtils.parseLocationLink(
-        link.isNotEmpty ? link : (address.formatted ?? ''),
-      );
-      if (parsed != null) return parsed;
+    final all = _getAllContactLocations(contact);
+    return all.isEmpty ? null : all.first;
+  }
+
+  /// Returns ALL valid LatLng positions for a contact.
+  /// Tries every website URL for each address (not just same-index pairing).
+  List<LatLng> _getAllContactLocations(Contact contact) {
+    final results = <LatLng>{};
+
+    // First: try to parse each website URL directly
+    for (final site in contact.websites) {
+      final parsed = MapUtils.parseLocationLink(site.url);
+      if (parsed != null) results.add(parsed);
     }
-    return null;
+
+    // Second: try each address text
+    for (final address in contact.addresses) {
+      final parsed = MapUtils.parseLocationLink(address.formatted ?? '');
+      if (parsed != null) results.add(parsed);
+    }
+
+    return results.toList();
   }
 
   Widget _buildSearchResults(ContactsState state) {
@@ -381,53 +394,46 @@ class _MapTabState extends State<MapTab> {
         List<Marker> markers = [];
         if (state is ContactsLoaded) {
           for (var contact in state.allContacts) {
-            for (var address in contact.addresses) {
-              final link = contact.websites.isNotEmpty
-                  ? contact.websites.first.url
-                  : '';
-              final parsed = MapUtils.parseLocationLink(
-                link.isNotEmpty ? link : (address.formatted ?? ''),
-              );
-              if (parsed != null) {
-                markers.add(
-                  Marker(
-                    point: parsed,
-                    width: 50,
-                    height: 50,
-                    child: GestureDetector(
-                      onTap: () =>
-                          _showContactPreview(contact, focusLatLng: parsed),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Colors.white,
-                          backgroundImage: contact.photo?.thumbnail != null
-                              ? MemoryImage(contact.photo!.thumbnail!)
-                              : null,
-                          child: contact.photo?.thumbnail == null
-                              ? const Icon(
-                                  Icons.person,
-                                  color: Color(0xFF33A1E5),
-                                )
-                              : null,
-                        ),
+            final locations = _getAllContactLocations(contact);
+            for (final parsed in locations) {
+              markers.add(
+                Marker(
+                  point: parsed,
+                  width: 50,
+                  height: 50,
+                  child: GestureDetector(
+                    onTap: () =>
+                        _showContactPreview(contact, focusLatLng: parsed),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.white,
+                        backgroundImage: contact.photo?.thumbnail != null
+                            ? MemoryImage(contact.photo!.thumbnail!)
+                            : null,
+                        child: contact.photo?.thumbnail == null
+                            ? const Icon(
+                                Icons.person,
+                                color: Color(0xFF33A1E5),
+                              )
+                            : null,
                       ),
                     ),
                   ),
-                );
-              }
+                ),
+              );
             }
           }
         }
@@ -713,17 +719,7 @@ class _MapTabState extends State<MapTab> {
 
   Future<void> _getDirections(Contact contact, LatLng? targetLatLng) async {
     LatLng? dest = targetLatLng;
-    if (dest == null) {
-      for (var address in contact.addresses) {
-        final link = contact.websites.isNotEmpty
-            ? contact.websites.first.url
-            : '';
-        dest = MapUtils.parseLocationLink(
-          link.isNotEmpty ? link : (address.formatted ?? ''),
-        );
-        if (dest != null) break;
-      }
-    }
+    dest ??= _getContactLocation(contact);
 
     if (dest == null || _currentLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(

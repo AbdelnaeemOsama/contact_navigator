@@ -2,6 +2,7 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:permission_handler/permission_handler.dart';
 import '../bloc/voice_assistant_bloc.dart';
 
 class ParsedIntent {
@@ -24,6 +25,10 @@ class VoiceCommandService {
         _stt = speechToText ?? stt.SpeechToText();
 
   Future<bool> initialize() async {
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) {
+      return false;
+    }
     await _tts.setLanguage('ar-EG');
     await _tts.setSpeechRate(0.5);
     await _tts.setPitch(1.0);
