@@ -5,8 +5,8 @@ import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_state.dart';
 import 'package:contact_navigator/features/contacts/favorites_page.dart';
 
-/// Horizontal "Favorites" strip on the contacts tab (header + avatars + "View all").
-class ContactsFavoritesSection extends StatelessWidget {
+/// Collapsible favorites strip on the contacts tab.
+class ContactsFavoritesSection extends StatefulWidget {
   final List<Contact> favorites;
   final ContactNameFormat nameFormat;
 
@@ -15,6 +15,13 @@ class ContactsFavoritesSection extends StatelessWidget {
     required this.favorites,
     required this.nameFormat,
   });
+
+  @override
+  State<ContactsFavoritesSection> createState() => _ContactsFavoritesSectionState();
+}
+
+class _ContactsFavoritesSectionState extends State<ContactsFavoritesSection> {
+  bool _expanded = false;
 
   static Color _avatarColor(String name) {
     final hash = name.isNotEmpty ? name.codeUnitAt(0) : 0;
@@ -42,14 +49,62 @@ class ContactsFavoritesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (favorites.isEmpty) return const SizedBox.shrink();
+    if (widget.favorites.isEmpty) return const SizedBox.shrink();
+
+    if (!_expanded) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 20),
+        child: Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: () => setState(() => _expanded = true),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(Icons.star_rounded, color: Colors.amber.shade600, size: 22),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Favorites',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textBlue,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryBlue.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${widget.favorites.length}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryBlue,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.expand_more_rounded, color: Colors.grey.shade500),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
               'Favorites',
@@ -59,11 +114,12 @@ class ContactsFavoritesSection extends StatelessWidget {
                 color: AppColors.textBlue,
               ),
             ),
+            const Spacer(),
             GestureDetector(
               onTap: () => Navigator.push<void>(
                 context,
                 MaterialPageRoute<void>(
-                  builder: (context) => FavoritesPage(favorites: favorites),
+                  builder: (context) => FavoritesPage(favorites: widget.favorites),
                 ),
               ),
               child: Container(
@@ -82,6 +138,11 @@ class ContactsFavoritesSection extends StatelessWidget {
                 ),
               ),
             ),
+            IconButton(
+              onPressed: () => setState(() => _expanded = false),
+              icon: Icon(Icons.expand_less_rounded, color: Colors.grey.shade600),
+              tooltip: 'Collapse',
+            ),
           ],
         ),
         const SizedBox(height: 20),
@@ -89,15 +150,15 @@ class ContactsFavoritesSection extends StatelessWidget {
           height: 120,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: favorites.length,
+            itemCount: widget.favorites.length,
             itemBuilder: (context, fIndex) {
-              final c = favorites[fIndex];
+              final c = widget.favorites[fIndex];
               return Padding(
                 padding: const EdgeInsets.only(right: 20),
                 child: _FavoriteAvatarTile(
                   contact: c,
                   bgColor: _avatarColor(c.displayName ?? ''),
-                  name: _formattedName(c, nameFormat),
+                  name: _formattedName(c, widget.nameFormat),
                   onTap: () => _callContact(c),
                 ),
               );

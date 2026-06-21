@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:contact_navigator/features/contacts/add_contact_page.dart';
@@ -14,6 +13,7 @@ import 'bloc/contacts_state.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'widgets/contact_list_item.dart';
 import 'widgets/contacts_search_bar.dart';
+import 'contacts_search_page.dart';
 import 'widgets/contacts_favorites_section.dart';
 import 'package:contact_navigator/core/widgets/custom_bottom_nav.dart';
 import 'package:latlong2/latlong.dart';
@@ -31,23 +31,16 @@ class _ContactsPageState extends State<ContactsPage> {
   int? _expandedIndex;
   LatLng? _mapFocusLocation;
   bool _mapVisited = false;
-  Timer? _searchDebounce;
 
   final GlobalKey<CategoriesPageState> _categoriesKey = GlobalKey<CategoriesPageState>();
 
-  @override
-  void dispose() {
-    _searchDebounce?.cancel();
-    super.dispose();
-  }
-
-  void _onSearchQueryChanged(String query) {
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
-      if (!mounted) return;
-      setState(() => _expandedIndex = null);
-      context.read<ContactsBloc>().add(SearchContactsEvent(query));
-    });
+  void _openContactsSearch() {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => ContactsSearchPage(onNavigateToMap: _navigateToMap),
+      ),
+    );
   }
 
   void _navigateToMap(LatLng latLng) {
@@ -88,7 +81,7 @@ class _ContactsPageState extends State<ContactsPage> {
         buildWhen: (previous, current) {
           if (previous.runtimeType != current.runtimeType) return true;
           if (current is ContactsLoaded && previous is ContactsLoaded) {
-            return previous.filteredContacts != current.filteredContacts ||
+            return previous.allContacts != current.allContacts ||
                 previous.favoriteIds != current.favoriteIds ||
                 previous.nameFormat != current.nameFormat ||
                 previous.sortOrder != current.sortOrder;
@@ -123,16 +116,17 @@ class _ContactsPageState extends State<ContactsPage> {
 
   Widget _buildContactsList(ContactsLoaded state, Color lightBlue) {
     final favorites = state.allContacts.where((c) => state.favoriteIds.contains(c.id)).toList();
-    
+    final contacts = state.allContacts;
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       cacheExtent: 400,
-      itemCount: state.filteredContacts.length + 4,
+      itemCount: contacts.length + 4,
       itemBuilder: (context, index) {
         if (index == 0) {
-          return ContactsSearchBar(onQueryChanged: _onSearchQueryChanged);
+          return ContactsSearchBar(onTap: _openContactsSearch);
         } else if (index == 1) {
           return ContactsFavoritesSection(
             favorites: favorites,
@@ -140,12 +134,12 @@ class _ContactsPageState extends State<ContactsPage> {
           );
         } else if (index == 2) {
           return _buildSectionHeader('All Contacts');
-        } else if (index == state.filteredContacts.length + 3) {
+        } else if (index == contacts.length + 3) {
           return const SizedBox(height: 120);
         }
 
         final contactIndex = index - 3;
-        final contact = state.filteredContacts[contactIndex];
+        final contact = contacts[contactIndex];
         return ContactListItem(
           key: ValueKey(contact.id ?? 'contact_$contactIndex'),
           index: contactIndex,
