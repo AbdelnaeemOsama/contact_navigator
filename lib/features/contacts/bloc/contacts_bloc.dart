@@ -14,8 +14,12 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
   final IGroupService _groupService;
   StreamSubscription? _contactsSubscription;
 
-  ContactsBloc(this._contactService, this._settingsService, this._groupService)
-      : super(ContactsInitial()) {
+  ContactsBloc(
+    this._contactService,
+    this._settingsService,
+    this._groupService, {
+    Stream<void>? externalChanges,
+  }) : super(ContactsInitial()) {
     on<LoadContactsEvent>(_onLoadContacts);
     on<ClearContactsSnackBarEvent>(_onClearSnackBar);
     on<ClearContactsNavigationAckEvent>(_onClearNavigationAck);
@@ -27,7 +31,8 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     on<AddMultipleToGroupEvent>(_onAddMultipleToGroup);
     on<UpdateDisplaySettingsEvent>(_onUpdateDisplaySettings);
 
-    _contactsSubscription = FlutterContacts.onContactChange.listen((_) {
+    final source = externalChanges ?? FlutterContacts.onContactChange;
+    _contactsSubscription = source.listen((_) {
       _debounceTimer?.cancel();
       _debounceTimer = Timer(const Duration(milliseconds: 500), () {
         add(const LoadContactsEvent(silent: true));
@@ -95,6 +100,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
 
       _sortContacts(contacts, sortOrder);
       final filtered = _filterContactsByQuery(contacts, query, sortOrder);
+      final favoriteIds = _settingsService.getFavoriteIds().toSet();
 
       emit(
         ContactsLoaded(
@@ -107,6 +113,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
           isRefreshing: false,
           snackbarMessage: event.snackbarMessage,
           navigationAck: event.navigationAck,
+          favoriteIds: favoriteIds,
         ),
       );
     } catch (e) {
@@ -196,7 +203,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
         navigationAck: 'contactSaved',
       );
     } catch (e) {
-      emit(ContactsError('Failed to create contact: ${e.toString()}'));
+      _emitMutationError(emit, 'Failed to create contact', e);
     }
   }
 
@@ -221,7 +228,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
         navigationAck: 'contactSaved',
       );
     } catch (e) {
-      emit(ContactsError('Failed to update contact: ${e.toString()}'));
+      _emitMutationError(emit, 'Failed to update contact', e);
     }
   }
 
@@ -236,7 +243,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
         snackbarMessage: 'Contact deleted successfully',
       );
     } catch (e) {
-      emit(ContactsError('Failed to delete contact: ${e.toString()}'));
+      _emitMutationError(emit, 'Failed to delete contact', e);
     }
   }
 
@@ -248,14 +255,9 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
       if (event.contact.id != null) {
         await _settingsService.toggleFavorite(event.contact.id!);
       }
-      try {
-        await _contactService.toggleFavorite(event.contact);
-      } catch (e) {
-        debugPrint('Native toggle favorite failed: $e');
-      }
       await _reloadAfterMutation(emit);
     } catch (e) {
-      emit(ContactsError('Failed to toggle favorite: ${e.toString()}'));
+      _emitMutationError(emit, 'Failed to toggle favorite', e);
     }
   }
 
@@ -273,7 +275,18 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
         navigationAck: 'selectionDone',
       );
     } catch (e) {
-      emit(ContactsError('Failed to add contacts to group: ${e.toString()}'));
+      _emitMutationError(emit, 'Failed to add contacts to group', e);
+    }
+  }
+
+  /// Emits a snackbar error on the current [ContactsLoaded] state instead of
+  /// replacing it with [ContactsError], so the user stays on the contacts list.
+  void _emitMutationError(Emitter<ContactsState> emit, String label, Object e) {
+    final s = state;
+    if (s is ContactsLoaded) {
+      emit(s.copyWith(snackbarMessage: '$label: $e'));
+    } else {
+      emit(ContactsError('$label: $e'));
     }
   }
 

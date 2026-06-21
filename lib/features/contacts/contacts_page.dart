@@ -16,7 +16,7 @@ import 'widgets/contacts_search_bar.dart';
 import 'widgets/contacts_favorites_section.dart';
 import 'package:contact_navigator/core/widgets/custom_bottom_nav.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:contact_navigator/core/services/settings_service.dart';
+
 
 class ContactsPage extends StatefulWidget {
   const ContactsPage({super.key});
@@ -69,10 +69,11 @@ class _ContactsPageState extends State<ContactsPage> {
         final loaded = state as ContactsLoaded;
         final message = loaded.snackbarMessage;
         if (message == null || message.isEmpty) return;
+        final isError = message.startsWith('Failed to');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
-            backgroundColor: Colors.green,
+            backgroundColor: isError ? Colors.red.shade700 : Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -130,10 +131,11 @@ class _ContactsPageState extends State<ContactsPage> {
   }
 
   Widget _buildContactsList(ContactsLoaded state, Color lightBlue) {
-    final settingsService = context.read<SettingsService>();
-    final favorites = state.allContacts.where((c) => settingsService.isFavorite(c.id ?? '')).toList();
+    final favorites = state.allContacts.where((c) => state.favoriteIds.contains(c.id)).toList();
     
-    return ListView.builder(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       itemCount: state.filteredContacts.length + 4,
       itemBuilder: (context, index) {
@@ -169,6 +171,7 @@ class _ContactsPageState extends State<ContactsPage> {
           onNavigateToMap: _navigateToMap,
         );
       },
+      ),
     );
   }
 
@@ -321,8 +324,8 @@ class _ContactsPageState extends State<ContactsPage> {
   }
 
   Color _getContactColor(String name) {
-    final colors = [const Color(0xFFD4E4FC), const Color(0xFFC2E8FF), const Color(0xFFFF7B93), const Color(0xFFE5E7EB)];
-    return colors[name.hashCode % colors.length];
+    final hash = name.isNotEmpty ? name.codeUnitAt(0) : 0;
+    return AppColors.contactAvatarColors[hash % AppColors.contactAvatarColors.length];
   }
 
 }

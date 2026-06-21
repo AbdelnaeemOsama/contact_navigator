@@ -26,7 +26,6 @@ class _AddressPageState extends State<AddressPage> {
   LatLng? _selectedLocation;
   bool _isLocating = false;
   bool _isGeocoding = false;
-  bool _isResolvingLink = false;
 
   @override
   void initState() {
@@ -203,7 +202,7 @@ class _AddressPageState extends State<AddressPage> {
   }
 
   /// Parse a pasted link and jump the map to it
-  Future<void> _parseAndJumpToLink() async {
+  void _parseAndJumpToLink() {
     final link = _linkController.text.trim();
     if (link.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -212,19 +211,14 @@ class _AddressPageState extends State<AddressPage> {
       return;
     }
 
-    setState(() => _isResolvingLink = true);
-    try {
-      final parsed = await MapUtils.resolveAndParseLocationLink(link);
-      if (parsed != null && mounted) {
-        _moveToLocation(parsed, updateLink: false);
-        _reverseGeocode(parsed);
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not parse coordinates from that link')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isResolvingLink = false);
+    final parsed = MapUtils.parseLocationLink(link);
+    if (parsed != null) {
+      _moveToLocation(parsed, updateLink: false);
+      _reverseGeocode(parsed);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not parse coordinates from that link')),
+      );
     }
   }
 
@@ -458,12 +452,10 @@ class _AddressPageState extends State<AddressPage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _isResolvingLink 
-                                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                : const Icon(Icons.link, color: Colors.white, size: 24),
+                            const Icon(Icons.link, color: Colors.white, size: 24),
                             const SizedBox(width: 12),
                             Text(
-                              _isResolvingLink ? 'Resolving...' : 'Show on Map',
+                              'Show on Map',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,

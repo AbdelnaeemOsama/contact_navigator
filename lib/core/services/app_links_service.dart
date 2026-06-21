@@ -82,10 +82,10 @@ class AppLinksService {
           final link = contact.websites.first.url;
           if (link.isNotEmpty) {
             final uri = Uri.parse(link);
-            if (await canLaunchUrl(uri)) {
+            try {
               await launchUrl(uri, mode: LaunchMode.externalApplication);
               return;
-            }
+            } catch (_) {}
           }
         }
       }
@@ -93,9 +93,9 @@ class AppLinksService {
 
     // Fallback: Just open Google Maps with the query
     final uri = Uri.parse('google.navigation:q=${Uri.encodeComponent(destination)}');
-    if (await canLaunchUrl(uri)) {
+    try {
       await launchUrl(uri);
-    }
+    } catch (_) {}
   }
 
   void dispose() {

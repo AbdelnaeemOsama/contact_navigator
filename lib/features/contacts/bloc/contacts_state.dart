@@ -25,6 +25,7 @@ class ContactsLoaded extends ContactsState {
   final bool isRefreshing;
   final String? snackbarMessage;
   final String? navigationAck;
+  final Set<String> favoriteIds;
 
   const ContactsLoaded({
     required this.allContacts,
@@ -36,6 +37,7 @@ class ContactsLoaded extends ContactsState {
     this.isRefreshing = false,
     this.snackbarMessage,
     this.navigationAck,
+    this.favoriteIds = const {},
   });
 
   ContactsLoaded copyWith({
@@ -48,6 +50,7 @@ class ContactsLoaded extends ContactsState {
     bool? isRefreshing,
     String? snackbarMessage,
     String? navigationAck,
+    Set<String>? favoriteIds,
     bool clearSnack = false,
     bool clearNav = false,
   }) {
@@ -61,6 +64,7 @@ class ContactsLoaded extends ContactsState {
       isRefreshing: isRefreshing ?? this.isRefreshing,
       snackbarMessage: clearSnack ? null : (snackbarMessage ?? this.snackbarMessage),
       navigationAck: clearNav ? null : (navigationAck ?? this.navigationAck),
+      favoriteIds: favoriteIds ?? this.favoriteIds,
     );
   }
 
@@ -75,6 +79,7 @@ class ContactsLoaded extends ContactsState {
         isRefreshing,
         snackbarMessage,
         navigationAck,
+        favoriteIds,
       ];
 }
 

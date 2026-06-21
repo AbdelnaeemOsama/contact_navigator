@@ -22,9 +22,9 @@ class ContactPreviewSheet extends StatelessWidget {
   Future<void> _launchSms(String phone) async {
     if (phone.isEmpty) return;
     final Uri smsUri = Uri.parse('sms:$phone');
-    if (await canLaunchUrl(smsUri)) {
+    try {
       await launchUrl(smsUri);
-    }
+    } catch (_) {}
   }
 
   Widget _buildInfoTile({required IconData icon, required String value, required VoidCallback onCopy}) {

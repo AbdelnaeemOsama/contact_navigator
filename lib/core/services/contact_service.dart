@@ -31,7 +31,6 @@ abstract class IContactService {
   Future<Contact?> getProfile();
   Future<void> updateProfile(Contact contact);
   Future<String?> getSimNumber();
-  Future<void> toggleFavorite(Contact contact);
 }
 
 class ContactService implements IContactService {
@@ -166,10 +165,10 @@ class ContactService implements IContactService {
   Future<void> launchLocation(String url) async {
     if (url.isEmpty) return;
     final uri = Uri.parse(url);
-    // ignore: deprecated_member_use
-    if (await canLaunchUrl(uri)) {
-      // ignore: deprecated_member_use
+    try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      debugPrint('Could not launch $url');
     }
   }
 
@@ -202,16 +201,4 @@ class ContactService implements IContactService {
     }
   }
 
-  @override
-  Future<void> toggleFavorite(Contact contact) async {
-    final currentStatus = contact.android?.isFavorite ?? false;
-    final updatedAndroid = AndroidData(
-      isFavorite: !currentStatus,
-      customRingtone: contact.android?.customRingtone,
-      sendToVoicemail: contact.android?.sendToVoicemail,
-      identifiers: contact.android?.identifiers,
-    );
-    final updatedContact = contact.copyWith(android: updatedAndroid);
-    await FlutterContacts.update(updatedContact);
-  }
 }

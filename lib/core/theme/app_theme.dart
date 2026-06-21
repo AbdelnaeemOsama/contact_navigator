@@ -10,6 +10,14 @@ class AppColors {
   static const dialogBackground = Color(0xFFE7EFF7);
   static const lightBlue = Color(0xFF33A1E5);
   static const darkBlue = Color(0xFF004080);
+
+  /// Contact avatar background palette (4 colors)
+  static const contactAvatarColors = [
+    Color(0xFFD4E4FC),
+    Color(0xFFC2E8FF),
+    Color(0xFFFF7B93),
+    Color(0xFFE5E7EB),
+  ];
 }
 
 class AppFonts {

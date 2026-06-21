@@ -392,19 +392,18 @@ class _AddContactPageState extends State<AddContactPage> {
             ),
           ],
         ),
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28.0),
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: SingleChildScrollView(
+            child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               children: [
                 const SizedBox(height: 16),
                 // Profile Section
                 Center(
                   child: InkWell(
-                    onTap: () {
-                      debugPrint('Profile photo tapped!');
-                      _pickImage();
-                    },
+                    onTap: () => _pickImage(),
                     borderRadius: BorderRadius.circular(65),
                     child: Stack(
                       children: [
@@ -503,7 +502,8 @@ class _AddContactPageState extends State<AddContactPage> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildField({
