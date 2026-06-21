@@ -78,15 +78,8 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
 
       final contacts = await _contactService.getContacts(
         withProperties: true,
-        withPhoto: true,
+        withPhoto: false,
       );
-
-      Contact? userProfile;
-      try {
-        userProfile = await _contactService.getProfile();
-      } catch (e) {
-        debugPrint('Error fetching user profile: $e');
-      }
 
       final sortOrder = priorLoaded?.sortOrder ?? _settingsService.getSortOrder();
       final nameFormat = priorLoaded?.nameFormat ?? _settingsService.getNameFormat();
@@ -103,13 +96,22 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
           searchQuery: query,
           sortOrder: sortOrder,
           nameFormat: nameFormat,
-          userContact: userProfile,
+          userContact: priorLoaded?.userContact,
           isRefreshing: false,
           snackbarMessage: event.snackbarMessage,
           navigationAck: event.navigationAck,
           favoriteIds: favoriteIds,
         ),
       );
+
+      try {
+        final userProfile = await _contactService.getProfile();
+        if (!isClosed && state is ContactsLoaded) {
+          emit((state as ContactsLoaded).copyWith(userContact: userProfile));
+        }
+      } catch (e) {
+        debugPrint('Error fetching user profile: $e');
+      }
     } catch (e) {
       emit(ContactsError(e.toString()));
     }

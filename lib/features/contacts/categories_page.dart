@@ -193,11 +193,7 @@ class CategoriesPageState extends State<CategoriesPage> {
           Expanded(
             child: BlocBuilder<CategoriesBloc, CategoriesState>(
               builder: (context, state) {
-                if (state is CategoriesLoading) {
-                  return const Center(
-                    child: CircularProgressIndicator(color: lightBlue),
-                  );
-                } else if (state is CategoriesError) {
+                if (state is CategoriesError) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -250,8 +246,14 @@ class CategoriesPageState extends State<CategoriesPage> {
                       ),
                     ),
                   );
-                } else if (state is CategoriesLoaded) {
-                  final groups = state.filteredGroups;
+                } else if (state is CategoriesLoaded ||
+                    state is CategoriesLoading ||
+                    state is CategoriesInitial) {
+                  final groups = state is CategoriesLoaded
+                      ? state.filteredGroups
+                      : const <Category>[];
+                  final searchQuery =
+                      state is CategoriesLoaded ? state.searchQuery : '';
 
                   if (groups.isEmpty) {
                     return Center(
@@ -261,7 +263,7 @@ class CategoriesPageState extends State<CategoriesPage> {
                           Icon(Icons.folder_open_rounded, color: lightBlue.withValues(alpha: 0.5), size: 56),
                           const SizedBox(height: 16),
                           Text(
-                            state.searchQuery.isNotEmpty
+                            searchQuery.isNotEmpty
                                 ? 'No categories match your search'
                                 : 'No categories yet',
                             style: TextStyle(
@@ -269,7 +271,7 @@ class CategoriesPageState extends State<CategoriesPage> {
                               fontSize: 16,
                             ),
                           ),
-                          if (state.searchQuery.isEmpty) ...[
+                          if (searchQuery.isEmpty) ...[
                             const SizedBox(height: 8),
                             Text(
                               'Tap + to create one',
@@ -294,32 +296,7 @@ class CategoriesPageState extends State<CategoriesPage> {
                     },
                   );
                 }
-                // CategoriesInitial
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.category_rounded, color: lightBlue, size: 48),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () {
-                          context.read<CategoriesBloc>().add(LoadCategoriesEvent());
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: lightBlue,
-                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                        ),
-                        child: const Text(
-                          'Load Categories',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+                return const SizedBox.shrink();
               },
             ),
           ),

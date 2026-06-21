@@ -18,6 +18,7 @@ class ContactListItem extends StatelessWidget {
   final Contact contact;
   final Color bgColor;
   final ContactNameFormat nameFormat;
+  final bool isFavorite;
   final bool isExpanded;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
@@ -30,6 +31,7 @@ class ContactListItem extends StatelessWidget {
     required this.contact,
     required this.bgColor,
     required this.nameFormat,
+    required this.isFavorite,
     required this.isExpanded,
     required this.onTap,
     this.onDelete,
@@ -41,7 +43,7 @@ class ContactListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final String name = _getFormattedName(contact, nameFormat);
     final String phone = contact.phones.isNotEmpty ? contact.phones.first.number : '';
-    final Uint8List? photo = contact.photo?.fullSize ?? contact.photo?.thumbnail;
+    final Uint8List? photo = contact.photo?.thumbnail;
 
     return Dismissible(
       key: Key('contact_${contact.id ?? index}_$index'),
@@ -143,7 +145,7 @@ class ContactListItem extends StatelessWidget {
                   if (isExpanded)
                     Row(
                       children: [
-                        _FavoriteButton(contact: contact),
+                        _FavoriteButton(contact: contact, isFavorite: isFavorite),
                         Text(
                           phone,
                           style: const TextStyle(
@@ -432,21 +434,22 @@ class ContactListItem extends StatelessWidget {
 
 class _FavoriteButton extends StatelessWidget {
   final Contact contact;
-  const _FavoriteButton({required this.contact});
+  final bool isFavorite;
+
+  const _FavoriteButton({
+    required this.contact,
+    required this.isFavorite,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<ContactsBloc>().state;
-    final favoriteIds = state is ContactsLoaded ? state.favoriteIds : <String>{};
-    final isFav = favoriteIds.contains(contact.id);
-
     return IconButton(
       onPressed: () {
         context.read<ContactsBloc>().add(ToggleFavoriteEvent(contact));
       },
       icon: Icon(
-        isFav ? Icons.star : Icons.star_border,
-        color: isFav ? Colors.amber : Colors.grey,
+        isFavorite ? Icons.star : Icons.star_border,
+        color: isFavorite ? Colors.amber : Colors.grey,
         size: 24,
       ),
     );

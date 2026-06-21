@@ -17,30 +17,38 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
 
     // Listen for system-wide contact changes to update counts
     _contactsSubscription = FlutterContacts.onContactChange.listen((_) {
-      add(LoadCategoriesEvent());
+      _scheduleReload();
     });
 
     // Listen for local group changes
     _groupsSubscription = _groupService.onGroupsChanged.listen((_) {
-      add(LoadCategoriesEvent());
+      _scheduleReload();
     });
   }
 
   StreamSubscription? _contactsSubscription;
   StreamSubscription? _groupsSubscription;
+  Timer? _reloadDebounce;
 
   @override
   Future<void> close() {
     _contactsSubscription?.cancel();
     _groupsSubscription?.cancel();
+    _reloadDebounce?.cancel();
     return super.close();
+  }
+
+  void _scheduleReload() {
+    _reloadDebounce?.cancel();
+    _reloadDebounce = Timer(const Duration(milliseconds: 600), () {
+      add(LoadCategoriesEvent());
+    });
   }
 
   Future<void> _onLoadCategories(
     LoadCategoriesEvent event,
     Emitter<CategoriesState> emit,
   ) async {
-    emit(CategoriesLoading());
     try {
       final groups = await _groupService.getGroups(withContactCount: true);
       groups.sort((a, b) => a.name.compareTo(b.name));

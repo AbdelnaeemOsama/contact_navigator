@@ -117,9 +117,7 @@ class _CategoryContactsPageState extends State<CategoryContactsPage> {
           Expanded(
             child: BlocBuilder<GroupContactsBloc, GroupContactsState>(
               builder: (context, state) {
-                if (state is GroupContactsLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (state is GroupContactsError) {
+                if (state is GroupContactsError) {
                   return Center(child: Text('Error: ${state.message}'));
                 } else if (state is GroupContactsLoaded) {
                   if (state.filteredContacts.isEmpty) {
@@ -127,7 +125,7 @@ class _CategoryContactsPageState extends State<CategoryContactsPage> {
                   }
                   return _buildContactList(state);
                 }
-                return const Center(child: CircularProgressIndicator());
+                return const SizedBox.shrink();
               },
             ),
           ),
@@ -139,19 +137,23 @@ class _CategoryContactsPageState extends State<CategoryContactsPage> {
   Widget _buildContactList(GroupContactsLoaded state) {
     final contactsState = context.read<ContactsBloc>().state;
     final nameFormat = contactsState is ContactsLoaded ? contactsState.nameFormat : ContactNameFormat.firstLast;
+    final favoriteIds = contactsState is ContactsLoaded ? contactsState.favoriteIds : const <String>{};
 
     return ListView.separated(
       padding: const EdgeInsets.all(16),
+      cacheExtent: 400,
       itemCount: state.filteredContacts.length,
       separatorBuilder: (context, index) => const SizedBox(height: 20),
       itemBuilder: (context, index) {
         final contact = state.filteredContacts[index];
 
         return ContactListItem(
+          key: ValueKey(contact.id ?? 'group_contact_$index'),
           index: index,
           contact: contact,
           bgColor: _getContactColor(contact.displayName ?? 'Unknown'),
           nameFormat: nameFormat,
+          isFavorite: favoriteIds.contains(contact.id),
           isExpanded: _expandedIndex == index,
           onTap: () {
             setState(() {
