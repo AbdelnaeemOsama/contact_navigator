@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:contact_navigator/core/utils/map_utils.dart';
 
 class ContactPreviewSheet extends StatelessWidget {
   final Contact contact;
@@ -64,7 +65,40 @@ class ContactPreviewSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final phone = contact.phones.isNotEmpty ? contact.phones.first.number : '';
     final email = contact.emails.isNotEmpty ? contact.emails.first.address : '';
-    final address = contact.addresses.isNotEmpty ? (contact.addresses.first.formatted ?? '') : '';
+    
+    String address = '';
+    if (contact.addresses.isNotEmpty) {
+      if (focusLatLng != null) {
+        int foundIndex = -1;
+        for (int i = 0; i < contact.websites.length; i++) {
+          final loc = MapUtils.parseLocationLink(contact.websites[i].url);
+          if (loc != null &&
+              (loc.latitude - focusLatLng!.latitude).abs() < 0.0001 &&
+              (loc.longitude - focusLatLng!.longitude).abs() < 0.0001) {
+            foundIndex = i;
+            break;
+          }
+        }
+        if (foundIndex == -1) {
+          for (int i = 0; i < contact.addresses.length; i++) {
+            final loc = MapUtils.parseLocationLink(contact.addresses[i].formatted ?? '');
+            if (loc != null &&
+                (loc.latitude - focusLatLng!.latitude).abs() < 0.0001 &&
+                (loc.longitude - focusLatLng!.longitude).abs() < 0.0001) {
+              foundIndex = i;
+              break;
+            }
+          }
+        }
+        if (foundIndex != -1 && foundIndex < contact.addresses.length) {
+          address = contact.addresses[foundIndex].formatted ?? '';
+        } else {
+          address = contact.addresses.first.formatted ?? '';
+        }
+      } else {
+        address = contact.addresses.first.formatted ?? '';
+      }
+    }
 
     return Container(
       margin: const EdgeInsets.all(16),
