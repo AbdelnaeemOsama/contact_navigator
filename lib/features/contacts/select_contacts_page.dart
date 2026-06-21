@@ -245,7 +245,7 @@ class _SelectContactsPageState extends State<SelectContactsPage> {
                     );
                   }
                   if (state is ContactsLoading || state is ContactsInitial) {
-                    return const Center(child: CircularProgressIndicator(color: lightBlue));
+                    return const SizedBox.shrink();
                   }
                   return const Center(child: Text('Failed to load contacts'));
                 },

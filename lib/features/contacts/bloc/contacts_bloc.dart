@@ -69,12 +69,6 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
   ) async {
     final ContactsLoaded? priorLoaded = state is ContactsLoaded ? state as ContactsLoaded : null;
 
-    if (priorLoaded != null && event.silent) {
-      emit(priorLoaded.copyWith(isRefreshing: true));
-    } else {
-      emit(ContactsLoading());
-    }
-
     try {
       final hasPermission = await _contactService.requestPermission();
       if (!hasPermission) {

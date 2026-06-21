@@ -25,7 +25,7 @@ void main() {
 
   group('ContactsBloc', () {
     blocTest<ContactsBloc, ContactsState>(
-      'emits [ContactsLoading, ContactsLoaded] on successful load',
+      'emits ContactsLoaded on successful load',
       build: () {
         when(() => mockContactService.requestPermission()).thenAnswer((_) async => true);
         when(() => mockContactService.getContacts(
@@ -37,7 +37,7 @@ void main() {
             externalChanges: noChanges);
       },
       act: (bloc) => bloc.add(LoadContactsEvent()),
-      expect: () => [isA<ContactsLoading>(), isA<ContactsLoaded>()],
+      expect: () => [isA<ContactsLoaded>()],
     );
 
     blocTest<ContactsBloc, ContactsState>(
@@ -48,7 +48,7 @@ void main() {
             externalChanges: noChanges);
       },
       act: (bloc) => bloc.add(LoadContactsEvent()),
-      expect: () => [isA<ContactsLoading>(), isA<ContactsPermissionDenied>()],
+      expect: () => [isA<ContactsPermissionDenied>()],
     );
 
     blocTest<ContactsBloc, ContactsState>(
@@ -63,11 +63,11 @@ void main() {
             externalChanges: noChanges);
       },
       act: (bloc) => bloc.add(LoadContactsEvent()),
-      expect: () => [isA<ContactsLoading>(), isA<ContactsError>()],
+      expect: () => [isA<ContactsError>()],
     );
 
     blocTest<ContactsBloc, ContactsState>(
-      'silent load keeps ContactsLoaded with isRefreshing',
+      'silent load updates ContactsLoaded without loading state',
       build: () {
         when(() => mockContactService.requestPermission()).thenAnswer((_) async => true);
         when(() => mockContactService.getContacts(
@@ -80,7 +80,10 @@ void main() {
       },
       seed: () => ContactsLoaded(allContacts: [], filteredContacts: []),
       act: (bloc) => bloc.add(LoadContactsEvent(silent: true)),
-      expect: () => [isA<ContactsLoaded>(), isA<ContactsLoaded>()],
+      expect: () => <ContactsState>[],
+      verify: (bloc) {
+        expect(bloc.state, isA<ContactsLoaded>());
+      },
     );
 
     blocTest<ContactsBloc, ContactsState>(

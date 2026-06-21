@@ -81,50 +81,26 @@ class _ContactsPageState extends State<ContactsPage> {
       },
       child: BlocBuilder<ContactsBloc, ContactsState>(
         builder: (context, state) {
-          if (state is ContactsLoading || state is ContactsInitial) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(color: lightBlue),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Loading contacts...',
-                    style: TextStyle(
-                      color: AppColors.textBlue.withValues(alpha: 0.7),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          } else if (state is ContactsError) {
+          if (state is ContactsError) {
             return _buildErrorState(state.message, lightBlue);
           } else if (state is ContactsPermissionDenied) {
             return _buildPermissionDeniedState(lightBlue);
-          } else if (state is ContactsLoaded) {
-            final loaded = state;
-            return Stack(
-              clipBehavior: Clip.none,
-              children: [
-                _buildContactsList(loaded, lightBlue),
-                if (loaded.isRefreshing)
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: LinearProgressIndicator(
-                      minHeight: 3,
-                      color: lightBlue,
-                      backgroundColor: lightBlue.withValues(alpha: 0.15),
-                    ),
-                  ),
-              ],
-            );
+          } else if (state is ContactsLoaded ||
+              state is ContactsLoading ||
+              state is ContactsInitial) {
+            final loaded = state is ContactsLoaded
+                ? state
+                : const ContactsLoaded(
+                    allContacts: [],
+                    filteredContacts: [],
+                  );
+            return _buildContactsList(loaded, lightBlue);
           }
 
-          return const Center(child: CircularProgressIndicator());
+          return _buildContactsList(
+            const ContactsLoaded(allContacts: [], filteredContacts: []),
+            lightBlue,
+          );
         },
       ),
     );
