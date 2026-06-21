@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
-import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_state.dart';
 import 'package:contact_navigator/features/contacts/favorites_page.dart';
+import 'package:latlong2/latlong.dart';
 
 /// Collapsible favorites strip on the contacts tab.
 class ContactsFavoritesSection extends StatefulWidget {
   final List<Contact> favorites;
   final ContactNameFormat nameFormat;
+  final void Function(Contact contact) onContactTap;
+  final void Function(LatLng location)? onNavigateToMap;
 
   const ContactsFavoritesSection({
     super.key,
     required this.favorites,
     required this.nameFormat,
+    required this.onContactTap,
+    this.onNavigateToMap,
   });
 
   @override
@@ -40,11 +44,6 @@ class _ContactsFavoritesSectionState extends State<ContactsFavoritesSection> {
       return '$first $last'.trim();
     }
     return '$last $first'.trim();
-  }
-
-  static Future<void> _callContact(Contact contact) async {
-    if (contact.phones.isEmpty) return;
-    await FlutterPhoneDirectCaller.callNumber(contact.phones.first.number);
   }
 
   @override
@@ -119,7 +118,10 @@ class _ContactsFavoritesSectionState extends State<ContactsFavoritesSection> {
               onTap: () => Navigator.push<void>(
                 context,
                 MaterialPageRoute<void>(
-                  builder: (context) => FavoritesPage(favorites: widget.favorites),
+                  builder: (context) => FavoritesPage(
+                    favorites: widget.favorites,
+                    onNavigateToMap: widget.onNavigateToMap,
+                  ),
                 ),
               ),
               child: Container(
@@ -159,7 +161,7 @@ class _ContactsFavoritesSectionState extends State<ContactsFavoritesSection> {
                   contact: c,
                   bgColor: _avatarColor(c.displayName ?? ''),
                   name: _formattedName(c, widget.nameFormat),
-                  onTap: () => _callContact(c),
+                  onTap: () => widget.onContactTap(c),
                 ),
               );
             },

@@ -17,6 +17,7 @@ import 'contacts_search_page.dart';
 import 'widgets/contacts_favorites_section.dart';
 import 'package:contact_navigator/core/widgets/custom_bottom_nav.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 
 
 class ContactsPage extends StatefulWidget {
@@ -31,8 +32,16 @@ class _ContactsPageState extends State<ContactsPage> {
   int? _expandedIndex;
   LatLng? _mapFocusLocation;
   bool _mapVisited = false;
+  final ScrollController _contactsScrollController = ScrollController();
+  final Map<String, GlobalKey> _contactItemKeys = {};
 
   final GlobalKey<CategoriesPageState> _categoriesKey = GlobalKey<CategoriesPageState>();
+
+  @override
+  void dispose() {
+    _contactsScrollController.dispose();
+    super.dispose();
+  }
 
   void _openContactsSearch() {
     Navigator.push<void>(
@@ -41,6 +50,32 @@ class _ContactsPageState extends State<ContactsPage> {
         builder: (context) => ContactsSearchPage(onNavigateToMap: _navigateToMap),
       ),
     );
+  }
+
+  void _onFavoriteContactTap(Contact contact) {
+    final blocState = context.read<ContactsBloc>().state;
+    if (blocState is! ContactsLoaded) return;
+
+    final contactIndex = blocState.allContacts.indexWhere((c) => c.id == contact.id);
+    if (contactIndex < 0) return;
+
+    setState(() {
+      _expandedIndex = contactIndex;
+    });
+    context.read<VoiceAssistantService>().speak(contact.displayName ?? '');
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final key = _contactItemKeys[contact.id];
+      final itemContext = key?.currentContext;
+      if (itemContext != null) {
+        Scrollable.ensureVisible(
+          itemContext,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+          alignment: 0.25,
+        );
+      }
+    });
   }
 
   void _navigateToMap(LatLng latLng) {
@@ -121,6 +156,7 @@ class _ContactsPageState extends State<ContactsPage> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: ListView.builder(
+      controller: _contactsScrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       cacheExtent: 400,
       itemCount: contacts.length + 4,
@@ -131,6 +167,8 @@ class _ContactsPageState extends State<ContactsPage> {
           return ContactsFavoritesSection(
             favorites: favorites,
             nameFormat: state.nameFormat,
+            onContactTap: _onFavoriteContactTap,
+            onNavigateToMap: _navigateToMap,
           );
         } else if (index == 2) {
           return _buildSectionHeader('All Contacts');
@@ -140,8 +178,12 @@ class _ContactsPageState extends State<ContactsPage> {
 
         final contactIndex = index - 3;
         final contact = contacts[contactIndex];
+        final itemKey = _contactItemKeys.putIfAbsent(
+          contact.id ?? 'contact_$contactIndex',
+          GlobalKey.new,
+        );
         return ContactListItem(
-          key: ValueKey(contact.id ?? 'contact_$contactIndex'),
+          key: itemKey,
           index: contactIndex,
           contact: contact,
           bgColor: _getContactColor(contact.displayName ?? ''),
