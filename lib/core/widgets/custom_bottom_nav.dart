@@ -36,7 +36,6 @@ class CustomBottomNav extends StatelessWidget {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _buildNavItem(context, 0, Icons.person_rounded, 'Contacts'),
           _buildNavItem(context, 1, Icons.dialpad_rounded, 'Keypad'),
@@ -53,42 +52,47 @@ class CustomBottomNav extends StatelessWidget {
     const activeColor = Color(0xFF33A1E5);
     final inactiveColor = Colors.grey.shade400;
 
-    return Semantics(
-      label: label,
-      button: true,
-      selected: isSelected,
-      child: GestureDetector(
-        onTap: () {
-          if (!isSelected) {
-            onItemSelected(index);
-            Feedback.forTap(context);
-          }
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? activeColor.withValues(alpha: 0.15) : Colors.transparent,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? activeColor : inactiveColor,
-                size: 24,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
+    return Expanded(
+      child: Semantics(
+        label: label,
+        button: true,
+        selected: isSelected,
+        child: GestureDetector(
+          onTap: () {
+            if (!isSelected) {
+              onItemSelected(index);
+              Feedback.forTap(context);
+            }
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected ? activeColor.withValues(alpha: 0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
                   color: isSelected ? activeColor : inactiveColor,
-                  fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  size: 22,
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isSelected ? activeColor : inactiveColor,
+                    fontSize: 9,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

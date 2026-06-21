@@ -90,9 +90,18 @@ class ContactListItem extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: isExpanded ? 28 : 30,
-                    backgroundColor: bgColor,
+                    backgroundColor: bgColor.withValues(alpha: 0.3),
                     backgroundImage: photo != null ? MemoryImage(photo) : null,
-                    child: photo == null ? const Icon(Icons.person, color: Colors.white) : null,
+                    child: photo == null
+                        ? Text(
+                            name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            style: TextStyle(
+                              fontSize: isExpanded ? 20 : 22,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textBlue,
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
