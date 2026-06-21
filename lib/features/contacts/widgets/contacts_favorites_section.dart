@@ -3,20 +3,27 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_state.dart';
 import 'package:contact_navigator/features/contacts/favorites_page.dart';
+import 'package:contact_navigator/features/contacts/widgets/contact_list_item.dart';
 import 'package:latlong2/latlong.dart';
 
-/// Collapsible favorites strip on the contacts tab.
+/// Collapsible favorites section using the same [ContactListItem] as the main list.
 class ContactsFavoritesSection extends StatefulWidget {
   final List<Contact> favorites;
   final ContactNameFormat nameFormat;
+  final Set<String> favoriteIds;
+  final String? expandedContactId;
   final void Function(Contact contact) onContactTap;
   final void Function(LatLng location)? onNavigateToMap;
+  final Color Function(String name) contactColor;
 
   const ContactsFavoritesSection({
     super.key,
     required this.favorites,
     required this.nameFormat,
+    required this.favoriteIds,
+    required this.expandedContactId,
     required this.onContactTap,
+    required this.contactColor,
     this.onNavigateToMap,
   });
 
@@ -25,39 +32,20 @@ class ContactsFavoritesSection extends StatefulWidget {
 }
 
 class _ContactsFavoritesSectionState extends State<ContactsFavoritesSection> {
-  bool _expanded = false;
-
-  static Color _avatarColor(String name) {
-    final hash = name.isNotEmpty ? name.codeUnitAt(0) : 0;
-    return AppColors.contactAvatarColors[hash % AppColors.contactAvatarColors.length];
-  }
-
-  static String _formattedName(Contact contact, ContactNameFormat format) {
-    if (contact.name == null) return contact.displayName ?? '';
-
-    final first = contact.name!.first ?? '';
-    final last = contact.name!.last ?? '';
-
-    if (first.isEmpty && last.isEmpty) return contact.displayName ?? '';
-
-    if (format == ContactNameFormat.firstLast) {
-      return '$first $last'.trim();
-    }
-    return '$last $first'.trim();
-  }
+  bool _sectionExpanded = false;
 
   @override
   Widget build(BuildContext context) {
     if (widget.favorites.isEmpty) return const SizedBox.shrink();
 
-    if (!_expanded) {
+    if (!_sectionExpanded) {
       return Padding(
         padding: const EdgeInsets.only(top: 20),
         child: Material(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           child: InkWell(
-            onTap: () => setState(() => _expanded = true),
+            onTap: () => setState(() => _sectionExpanded = true),
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -65,9 +53,9 @@ class _ContactsFavoritesSectionState extends State<ContactsFavoritesSection> {
                 children: [
                   Icon(Icons.star_rounded, color: Colors.amber.shade600, size: 22),
                   const SizedBox(width: 10),
-                  Text(
+                  const Text(
                     'Favorites',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textBlue,
@@ -141,85 +129,30 @@ class _ContactsFavoritesSectionState extends State<ContactsFavoritesSection> {
               ),
             ),
             IconButton(
-              onPressed: () => setState(() => _expanded = false),
+              onPressed: () => setState(() => _sectionExpanded = false),
               icon: Icon(Icons.expand_less_rounded, color: Colors.grey.shade600),
               tooltip: 'Collapse',
             ),
           ],
         ),
-        const SizedBox(height: 20),
-        SizedBox(
-          height: 120,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: widget.favorites.length,
-            itemBuilder: (context, fIndex) {
-              final c = widget.favorites[fIndex];
-              return Padding(
-                padding: const EdgeInsets.only(right: 20),
-                child: _FavoriteAvatarTile(
-                  contact: c,
-                  bgColor: _avatarColor(c.displayName ?? ''),
-                  name: _formattedName(c, widget.nameFormat),
-                  onTap: () => widget.onContactTap(c),
-                ),
-              );
-            },
-          ),
-        ),
+        const SizedBox(height: 8),
+        ...List.generate(widget.favorites.length, (index) {
+          final contact = widget.favorites[index];
+          final contactId = contact.id;
+          return ContactListItem(
+            key: ValueKey('favorite_${contactId ?? index}'),
+            index: index,
+            contact: contact,
+            bgColor: widget.contactColor(contact.displayName ?? ''),
+            nameFormat: widget.nameFormat,
+            isFavorite: widget.favoriteIds.contains(contactId),
+            isExpanded: widget.expandedContactId != null &&
+                widget.expandedContactId == contactId,
+            onTap: () => widget.onContactTap(contact),
+            onNavigateToMap: widget.onNavigateToMap,
+          );
+        }),
       ],
-    );
-  }
-}
-
-class _FavoriteAvatarTile extends StatelessWidget {
-  final Contact contact;
-  final Color bgColor;
-  final String name;
-  final VoidCallback onTap;
-
-  const _FavoriteAvatarTile({
-    required this.contact,
-    required this.bgColor,
-    required this.name,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final photo = contact.photo?.thumbnail;
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: bgColor.withValues(alpha: 0.3),
-            backgroundImage: photo != null ? MemoryImage(photo) : null,
-            child: photo == null
-                ? Text(
-                    name.isNotEmpty ? name[0].toUpperCase() : '?',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  )
-                : null,
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: 75,
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textBlue,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

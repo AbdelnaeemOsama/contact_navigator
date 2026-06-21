@@ -29,19 +29,11 @@ class ContactsPage extends StatefulWidget {
 
 class _ContactsPageState extends State<ContactsPage> {
   int _selectedIndex = 0;
-  int? _expandedIndex;
+  String? _expandedContactId;
   LatLng? _mapFocusLocation;
   bool _mapVisited = false;
-  final ScrollController _contactsScrollController = ScrollController();
-  final Map<String, GlobalKey> _contactItemKeys = {};
 
   final GlobalKey<CategoriesPageState> _categoriesKey = GlobalKey<CategoriesPageState>();
-
-  @override
-  void dispose() {
-    _contactsScrollController.dispose();
-    super.dispose();
-  }
 
   void _openContactsSearch() {
     Navigator.push<void>(
@@ -52,30 +44,15 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
-  void _onFavoriteContactTap(Contact contact) {
-    final blocState = context.read<ContactsBloc>().state;
-    if (blocState is! ContactsLoaded) return;
-
-    final contactIndex = blocState.allContacts.indexWhere((c) => c.id == contact.id);
-    if (contactIndex < 0) return;
-
+  void _onContactTap(Contact contact) {
+    final contactId = contact.id;
     setState(() {
-      _expandedIndex = contactIndex;
+      _expandedContactId =
+          _expandedContactId == contactId ? null : contactId;
     });
-    context.read<VoiceAssistantService>().speak(contact.displayName ?? '');
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final key = _contactItemKeys[contact.id];
-      final itemContext = key?.currentContext;
-      if (itemContext != null) {
-        Scrollable.ensureVisible(
-          itemContext,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-          alignment: 0.25,
-        );
-      }
-    });
+    if (_expandedContactId == contactId) {
+      context.read<VoiceAssistantService>().speak(contact.displayName ?? '');
+    }
   }
 
   void _navigateToMap(LatLng latLng) {
@@ -156,7 +133,6 @@ class _ContactsPageState extends State<ContactsPage> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: ListView.builder(
-      controller: _contactsScrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       cacheExtent: 400,
       itemCount: contacts.length + 4,
@@ -167,8 +143,11 @@ class _ContactsPageState extends State<ContactsPage> {
           return ContactsFavoritesSection(
             favorites: favorites,
             nameFormat: state.nameFormat,
-            onContactTap: _onFavoriteContactTap,
+            favoriteIds: state.favoriteIds,
+            expandedContactId: _expandedContactId,
+            onContactTap: _onContactTap,
             onNavigateToMap: _navigateToMap,
+            contactColor: _getContactColor,
           );
         } else if (index == 2) {
           return _buildSectionHeader('All Contacts');
@@ -178,26 +157,16 @@ class _ContactsPageState extends State<ContactsPage> {
 
         final contactIndex = index - 3;
         final contact = contacts[contactIndex];
-        final itemKey = _contactItemKeys.putIfAbsent(
-          contact.id ?? 'contact_$contactIndex',
-          GlobalKey.new,
-        );
         return ContactListItem(
-          key: itemKey,
+          key: ValueKey(contact.id ?? 'contact_$contactIndex'),
           index: contactIndex,
           contact: contact,
           bgColor: _getContactColor(contact.displayName ?? ''),
           nameFormat: state.nameFormat,
           isFavorite: state.favoriteIds.contains(contact.id),
-          isExpanded: _expandedIndex == contactIndex,
-          onTap: () {
-            setState(() {
-              _expandedIndex = _expandedIndex == contactIndex ? null : contactIndex;
-            });
-            if (_expandedIndex == contactIndex) {
-              context.read<VoiceAssistantService>().speak(contact.displayName ?? '');
-            }
-          },
+          isExpanded: _expandedContactId != null &&
+              _expandedContactId == contact.id,
+          onTap: () => _onContactTap(contact),
           onNavigateToMap: _navigateToMap,
         );
       },
