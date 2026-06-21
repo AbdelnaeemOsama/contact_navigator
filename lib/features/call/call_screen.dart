@@ -17,8 +17,6 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const lightBlue = Color(0xFF33A1E5);
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -28,7 +26,7 @@ class _CallScreenState extends State<CallScreen> {
             Center(
               child: CircleAvatar(
                 radius: 60,
-                backgroundColor: lightBlue.withValues(alpha: 0.2),
+                backgroundColor: AppColors.lightBlue.withValues(alpha: 0.2),
                 child: widget.imagePath.isNotEmpty
                     ? Padding(
                         padding: const EdgeInsets.all(4.0),
@@ -67,7 +65,11 @@ class _CallScreenState extends State<CallScreen> {
                     });
                   },
                 ),
-                _buildCallAction(Icons.videocam, 'Video'),
+                _buildCallAction(Icons.videocam, 'Video', onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Video call coming soon')),
+                  );
+                }),
                 _buildCallAction(
                   _isSpeakerOn ? Icons.volume_up : Icons.volume_down,
                   'Speaker',

@@ -17,25 +17,22 @@ class ContactsFavoritesSection extends StatelessWidget {
   });
 
   static Color _avatarColor(String name) {
-    const colors = [
-      Color(0xFFD4E4FC),
-      Color(0xFFC2E8FF),
-      Color(0xFFFF7B93),
-      Color(0xFFE5E7EB),
-    ];
-    return colors[name.hashCode % colors.length];
+    final hash = name.isNotEmpty ? name.codeUnitAt(0) : 0;
+    return AppColors.contactAvatarColors[hash % AppColors.contactAvatarColors.length];
   }
 
   static String _formattedName(Contact contact, ContactNameFormat format) {
     if (contact.name == null) return contact.displayName ?? '';
 
-    final first = contact.name!.first;
-    final last = contact.name!.last;
+    final first = contact.name!.first ?? '';
+    final last = contact.name!.last ?? '';
+
+    if (first.isEmpty && last.isEmpty) return contact.displayName ?? '';
 
     if (format == ContactNameFormat.firstLast) {
-      return '$first $last'.replaceAll('null', '').trim();
+      return '$first $last'.trim();
     }
-    return '$last $first'.replaceAll('null', '').trim();
+    return '$last $first'.trim();
   }
 
   static Future<void> _callContact(Contact contact) async {

@@ -4,6 +4,8 @@ import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:contact_navigator/features/contacts/category_contacts_page.dart';
 import 'package:contact_navigator/core/services/group_service.dart';
 import 'package:contact_navigator/core/services/voice_service.dart';
+import 'package:contact_navigator/features/contacts/bloc/contacts_bloc.dart';
+import 'package:contact_navigator/features/contacts/bloc/group_contacts_bloc.dart';
 import 'bloc/categories_bloc.dart';
 import 'bloc/categories_event.dart';
 import 'bloc/categories_state.dart';
@@ -401,15 +403,22 @@ class CategoriesPageState extends State<CategoriesPage> {
       child: GestureDetector(
         onTap: () {
           context.read<VoiceAssistantService>().speak(group.name);
+          final groupBloc = GroupContactsBloc(
+            context.read<IGroupService>(),
+            context.read<ContactsBloc>(),
+          );
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => CategoryContactsPage(
-                categoryTitle: group.name,
-                groupId: group.id,
+              builder: (context) => BlocProvider<GroupContactsBloc>.value(
+                value: groupBloc,
+                child: CategoryContactsPage(
+                  categoryTitle: group.name,
+                  groupId: group.id,
+                ),
               ),
             ),
-          );
+          ).whenComplete(() => groupBloc.close());
         },
         child: Container(
           padding: const EdgeInsets.all(12),

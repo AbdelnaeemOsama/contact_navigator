@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:contact_navigator/core/services/voice_service.dart';
-import 'package:contact_navigator/core/services/group_service.dart';
 import 'package:contact_navigator/features/contacts/select_contacts_page.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_bloc.dart';
-import 'package:contact_navigator/features/contacts/widgets/contact_list_item.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_state.dart';
+import 'package:contact_navigator/features/contacts/bloc/group_contacts_bloc.dart';
+import 'package:contact_navigator/features/contacts/bloc/group_contacts_event.dart';
+import 'package:contact_navigator/features/contacts/bloc/group_contacts_state.dart';
+import 'package:contact_navigator/features/contacts/widgets/contact_list_item.dart';
 
 class CategoryContactsPage extends StatefulWidget {
   final String categoryTitle;
@@ -24,88 +25,48 @@ class CategoryContactsPage extends StatefulWidget {
 }
 
 class _CategoryContactsPageState extends State<CategoryContactsPage> {
-  late IGroupService _groupService;
-  List<Contact> _allContacts = [];
-  List<Contact> _filteredContacts = [];
-  bool _isLoading = false;
-  String? _error;
   int? _expandedIndex;
 
   @override
   void initState() {
     super.initState();
-    _groupService = context.read<IGroupService>();
-    _loadContacts();
-  }
-
-  Future<void> _loadContacts() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    try {
-      final contactsState = context.read<ContactsBloc>().state;
-      List<Contact>? allLoadedContacts;
-      if (contactsState is ContactsLoaded) {
-        allLoadedContacts = contactsState.allContacts;
-      }
-
-      final contacts = await _groupService.getContactsInGroup(
-        widget.groupId, 
-        allContacts: allLoadedContacts,
-      );
-      if (!mounted) return;
-      
-      // Sort contacts based on global settings
-      final sortOrder = contactsState is ContactsLoaded ? contactsState.sortOrder : ContactSortOrder.firstName;
-      
-      contacts.sort((a, b) {
-        if (sortOrder == ContactSortOrder.firstName) {
-          final nameA = (a.name?.first ?? '').toLowerCase();
-          final nameB = (b.name?.first ?? '').toLowerCase();
-          return nameA.compareTo(nameB);
-        } else {
-          final nameA = (a.name?.last ?? '').toLowerCase();
-          final nameB = (b.name?.last ?? '').toLowerCase();
-          return nameA.compareTo(nameB);
-        }
-      });
-
-      setState(() {
-        _allContacts = contacts;
-        _filteredContacts = contacts;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
+    context.read<GroupContactsBloc>().add(LoadGroupContactsEvent(widget.groupId));
   }
 
   void _filterContacts(String query) {
-    setState(() {
-      _expandedIndex = null;
-      if (query.isEmpty) {
-        _filteredContacts = _allContacts;
-      } else {
-        final lowerQuery = query.toLowerCase();
-        _filteredContacts = _allContacts.where((contact) {
-          return (contact.displayName ?? '').toLowerCase().contains(lowerQuery);
-        }).toList();
+    setState(() => _expandedIndex = null);
+    context.read<GroupContactsBloc>().add(SearchGroupContactsEvent(query));
+  }
+
+  Future<void> _navigatorPushToSelectContacts(BuildContext context) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SelectContactsPage(
+          groupId: widget.groupId,
+          categoryTitle: widget.categoryTitle,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (result == true) {
+      this.context.read<GroupContactsBloc>().add(LoadGroupContactsEvent(widget.groupId));
+      if (mounted) {
+        ScaffoldMessenger.of(this.context).showSnackBar(
+          SnackBar(
+            content: Text('Contacts added to ${widget.categoryTitle}'),
+            backgroundColor: AppColors.primaryBlue,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
       }
-    });
+    }
   }
 
   Color _getContactColor(String name) {
-    final colors = [
-      const Color(0xFFD4E4FC),
-      const Color(0xFFC2E8FF),
-      const Color(0xFFFF7B93),
-      const Color(0xFFE5E7EB),
-    ];
-    return colors[name.hashCode % colors.length];
+    final hash = name.isNotEmpty ? name.codeUnitAt(0) : 0;
+    return AppColors.contactAvatarColors[hash % AppColors.contactAvatarColors.length];
   }
 
   @override
@@ -129,30 +90,8 @@ class _CategoryContactsPageState extends State<CategoryContactsPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: AppColors.primaryBlue),
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SelectContactsPage(
-                    groupId: widget.groupId,
-                    categoryTitle: widget.categoryTitle,
-                  ),
-                ),
-              );
-              if (!mounted) return;
-              if (result == true) {
-                _loadContacts();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Contacts added to ${widget.categoryTitle}'),
-                      backgroundColor: AppColors.primaryBlue,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  );
-                }
-              }
+            onPressed: () {
+              _navigatorPushToSelectContacts(context);
             },
           ),
         ],
@@ -176,28 +115,37 @@ class _CategoryContactsPageState extends State<CategoryContactsPage> {
             ),
           ),
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? Center(child: Text('Error: $_error'))
-                    : _filteredContacts.isEmpty
-                        ? const Center(child: Text('No contacts found'))
-                        : _buildContactList(),
+            child: BlocBuilder<GroupContactsBloc, GroupContactsState>(
+              builder: (context, state) {
+                if (state is GroupContactsLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (state is GroupContactsError) {
+                  return Center(child: Text('Error: ${state.message}'));
+                } else if (state is GroupContactsLoaded) {
+                  if (state.filteredContacts.isEmpty) {
+                    return const Center(child: Text('No contacts found'));
+                  }
+                  return _buildContactList(state);
+                }
+                return const Center(child: CircularProgressIndicator());
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildContactList() {
+  Widget _buildContactList(GroupContactsLoaded state) {
+    final contactsState = context.read<ContactsBloc>().state;
+    final nameFormat = contactsState is ContactsLoaded ? contactsState.nameFormat : ContactNameFormat.firstLast;
+
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: _filteredContacts.length,
+      itemCount: state.filteredContacts.length,
       separatorBuilder: (context, index) => const SizedBox(height: 20),
       itemBuilder: (context, index) {
-        final contact = _filteredContacts[index];
-        final contactsState = context.read<ContactsBloc>().state;
-        final nameFormat = contactsState is ContactsLoaded ? contactsState.nameFormat : ContactNameFormat.firstLast;
+        final contact = state.filteredContacts[index];
 
         return ContactListItem(
           index: index,
@@ -216,16 +164,16 @@ class _CategoryContactsPageState extends State<CategoryContactsPage> {
             }
           },
           onDelete: () {
-            _loadContacts(); // Reload this group's list
+            context.read<GroupContactsBloc>().add(LoadGroupContactsEvent(widget.groupId));
           },
-          onRemoveFromGroup: () async {
-            if (contact.id != null) {
-              final voice = context.read<VoiceAssistantService>();
-              await _groupService.removeContactFromGroup(contact.id!, widget.groupId);
-              if (mounted) {
-                voice.speak('Removed ${contact.displayName} from ${widget.categoryTitle}');
-                _loadContacts();
-              }
+          onRemoveFromGroup: () {
+            if (contact.id != null && context.mounted) {
+              context.read<VoiceAssistantService>().speak(
+                'Removed ${contact.displayName} from ${widget.categoryTitle}',
+              );
+              context.read<GroupContactsBloc>().add(
+                RemoveContactFromGroupEvent(contact.id!, widget.groupId),
+              );
             }
           },
         );

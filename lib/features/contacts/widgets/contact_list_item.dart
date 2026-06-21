@@ -11,7 +11,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:typed_data';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:contact_navigator/core/services/settings_service.dart';
+
 
 class ContactListItem extends StatelessWidget {
   final int index;
@@ -421,46 +421,23 @@ class ContactListItem extends StatelessWidget {
   }
 }
 
-class _FavoriteButton extends StatefulWidget {
+class _FavoriteButton extends StatelessWidget {
   final Contact contact;
   const _FavoriteButton({required this.contact});
 
   @override
-  State<_FavoriteButton> createState() => _FavoriteButtonState();
-}
-
-class _FavoriteButtonState extends State<_FavoriteButton> {
-  late bool _isFav;
-
-  @override
-  void initState() {
-    super.initState();
-    _isFav = context.read<SettingsService>().isFavorite(widget.contact.id ?? '');
-  }
-
-  @override
-  void didUpdateWidget(_FavoriteButton oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final settings = context.read<SettingsService>();
-    final oldFav = settings.isFavorite(oldWidget.contact.id ?? '');
-    final newFav = settings.isFavorite(widget.contact.id ?? '');
-    if (oldFav != newFav) {
-      _isFav = newFav;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final state = context.watch<ContactsBloc>().state;
+    final favoriteIds = state is ContactsLoaded ? state.favoriteIds : <String>{};
+    final isFav = favoriteIds.contains(contact.id);
+
     return IconButton(
       onPressed: () {
-        setState(() {
-          _isFav = !_isFav;
-        });
-        context.read<ContactsBloc>().add(ToggleFavoriteEvent(widget.contact));
+        context.read<ContactsBloc>().add(ToggleFavoriteEvent(contact));
       },
       icon: Icon(
-        _isFav ? Icons.star : Icons.star_border,
-        color: _isFav ? Colors.amber : Colors.grey,
+        isFav ? Icons.star : Icons.star_border,
+        color: isFav ? Colors.amber : Colors.grey,
         size: 24,
       ),
     );
