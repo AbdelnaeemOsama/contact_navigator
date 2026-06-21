@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:contact_navigator/core/services/group_service.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_bloc.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_state.dart';
@@ -35,15 +36,28 @@ class GroupContactsBloc extends Bloc<GroupContactsEvent, GroupContactsState> {
           : ContactSortOrder.firstName;
 
       contacts.sort((a, b) {
-        if (sortOrder == ContactSortOrder.firstName) {
-          final nameA = (a.name?.first ?? '').toLowerCase();
-          final nameB = (b.name?.first ?? '').toLowerCase();
-          return nameA.compareTo(nameB);
-        } else {
-          final nameA = (a.name?.last ?? '').toLowerCase();
-          final nameB = (b.name?.last ?? '').toLowerCase();
-          return nameA.compareTo(nameB);
+        String primary(Contact c) {
+          final first = (c.name?.first ?? '').trim();
+          final last = (c.name?.last ?? '').trim();
+          final display = (c.displayName ?? '').trim();
+          if (sortOrder == ContactSortOrder.firstName) {
+            return (first.isNotEmpty ? first : (last.isNotEmpty ? last : display))
+                .toLowerCase();
+          }
+          return (last.isNotEmpty ? last : (first.isNotEmpty ? first : display))
+              .toLowerCase();
         }
+
+        final cmp = primary(a).compareTo(primary(b));
+        if (cmp != 0) return cmp;
+
+        final secondaryA = sortOrder == ContactSortOrder.firstName
+            ? (a.name?.last ?? '').toLowerCase()
+            : (a.name?.first ?? '').toLowerCase();
+        final secondaryB = sortOrder == ContactSortOrder.firstName
+            ? (b.name?.last ?? '').toLowerCase()
+            : (b.name?.first ?? '').toLowerCase();
+        return secondaryA.compareTo(secondaryB);
       });
 
       emit(GroupContactsLoaded(

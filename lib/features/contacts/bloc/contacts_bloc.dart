@@ -346,25 +346,37 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
 
   void _sortContacts(List<Contact> contacts, ContactSortOrder sortOrder) {
     contacts.sort((a, b) {
-      if (sortOrder == ContactSortOrder.firstName) {
-        final nameA = (a.name?.first ?? '').toLowerCase();
-        final nameB = (b.name?.first ?? '').toLowerCase();
-        if (nameA == nameB) {
-          return (a.name?.last ?? '').toLowerCase().compareTo(
-                (b.name?.last ?? '').toLowerCase(),
-              );
-        }
-        return nameA.compareTo(nameB);
-      } else {
-        final nameA = (a.name?.last ?? '').toLowerCase();
-        final nameB = (b.name?.last ?? '').toLowerCase();
-        if (nameA == nameB) {
-          return (a.name?.first ?? '').toLowerCase().compareTo(
-                (b.name?.first ?? '').toLowerCase(),
-              );
-        }
-        return nameA.compareTo(nameB);
-      }
+      final primaryA = _sortPrimaryName(a, sortOrder);
+      final primaryB = _sortPrimaryName(b, sortOrder);
+      final primaryCompare = primaryA.compareTo(primaryB);
+      if (primaryCompare != 0) return primaryCompare;
+
+      return _sortSecondaryName(a, sortOrder).compareTo(
+        _sortSecondaryName(b, sortOrder),
+      );
     });
+  }
+
+  String _sortPrimaryName(Contact contact, ContactSortOrder sortOrder) {
+    final first = (contact.name?.first ?? '').trim();
+    final last = (contact.name?.last ?? '').trim();
+    final display = (contact.displayName ?? '').trim();
+
+    if (sortOrder == ContactSortOrder.firstName) {
+      return (first.isNotEmpty ? first : (last.isNotEmpty ? last : display))
+          .toLowerCase();
+    }
+    return (last.isNotEmpty ? last : (first.isNotEmpty ? first : display))
+        .toLowerCase();
+  }
+
+  String _sortSecondaryName(Contact contact, ContactSortOrder sortOrder) {
+    final first = (contact.name?.first ?? '').trim();
+    final last = (contact.name?.last ?? '').trim();
+
+    if (sortOrder == ContactSortOrder.firstName) {
+      return last.toLowerCase();
+    }
+    return first.toLowerCase();
   }
 }
