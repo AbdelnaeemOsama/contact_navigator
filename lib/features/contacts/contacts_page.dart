@@ -7,6 +7,7 @@ import 'package:contact_navigator/features/contacts/categories_page.dart';
 import 'package:contact_navigator/features/keypad/keypad_page.dart';
 import 'package:contact_navigator/features/settings/settings_page.dart';
 import 'package:contact_navigator/features/map/map_tab.dart';
+import 'package:contact_navigator/features/voice_assistant/widgets/voice_assistant_widget.dart';
 import 'bloc/contacts_bloc.dart';
 import 'bloc/contacts_event.dart';
 import 'bloc/contacts_state.dart';
@@ -214,8 +215,10 @@ class _ContactsPageState extends State<ContactsPage> {
   }
 
   Widget? _buildFab(Color lightBlue) {
+    final List<Widget> fabs = [];
+
     if (_selectedIndex == 0) {
-      return FloatingActionButton(
+      fabs.add(FloatingActionButton(
         onPressed: () async {
           final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => const AddContactPage()));
           if (result == true && mounted) {
@@ -225,16 +228,29 @@ class _ContactsPageState extends State<ContactsPage> {
         backgroundColor: lightBlue,
         shape: const CircleBorder(),
         child: const Icon(Icons.add, color: Colors.white, size: 32),
-      );
+      ));
     } else if (_selectedIndex == 3) {
-      return FloatingActionButton(
+      fabs.add(FloatingActionButton(
         onPressed: () => _categoriesKey.currentState?.showAddCategoryDialog(context),
         backgroundColor: lightBlue,
         shape: const CircleBorder(),
         child: const Icon(Icons.add, color: Colors.white, size: 32),
-      );
+      ));
     }
-    return null;
+
+    fabs.add(const VoiceAssistantFab());
+
+    if (fabs.isEmpty) return const VoiceAssistantFab();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (int i = 0; i < fabs.length; i++) ...[
+          if (i > 0) const SizedBox(height: 12),
+          fabs[i],
+        ],
+      ],
+    );
   }
 
   Widget _buildBody(Color lightBlue) {
