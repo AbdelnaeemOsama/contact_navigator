@@ -78,5 +78,7 @@
 		<string>This app requires access to your microphone for video recording if needed.</string>
 		<key>NSContactsUsageDescription</key>
 		<string>This app requires access to your contacts to display and manage them.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>Voice assistant needs speech recognition to call contacts by voice</string>
 	</dict>
 </plist>
