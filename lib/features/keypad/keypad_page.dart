@@ -279,15 +279,7 @@ class _KeypadPageState extends State<KeypadPage> {
     return BlocBuilder<ContactsBloc, ContactsState>(
       builder: (context, state) {
         if (state is ContactsLoading || state is ContactsInitial) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Center(
-              child: Text(
-                'Loading contacts…',
-                style: TextStyle(fontSize: 13, color: Colors.grey),
-              ),
-            ),
-          );
+          return const SizedBox(height: 8);
         }
         if (state is! ContactsLoaded) {
           return const SizedBox(height: 8);
