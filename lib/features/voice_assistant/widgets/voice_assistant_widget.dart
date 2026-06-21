@@ -45,6 +45,7 @@ class VoiceAssistantFab extends StatelessWidget {
         bloc.add(ResetAssistantEvent());
       });
     } else {
+      context.read<VoiceAssistantBloc>().add(ResetAssistantEvent());
       Navigator.of(context).pop();
     }
   }
@@ -57,12 +58,7 @@ class VoiceAssistantOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocConsumer<VoiceAssistantBloc, VoiceAssistantState>(
       listener: (context, state) {
-        if (state is VoiceAssistantIdle) {
-          final route = ModalRoute.of(context);
-          if (route != null && route.isCurrent) {
-            Navigator.of(context).pop();
-          }
-        }
+        if (state is VoiceAssistantIdle) Navigator.of(context).pop();
       },
       builder: (context, state) {
         return Container(
@@ -86,6 +82,8 @@ class VoiceAssistantOverlay extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 _buildContent(context, state),
+                const SizedBox(height: 24),
+                if (state is VoiceAssistantListening) _buildHints(),
               ],
             ),
           ),
@@ -189,6 +187,20 @@ class VoiceAssistantOverlay extends StatelessWidget {
     }
     return const SizedBox.shrink();
   }
+
+  Widget _buildHints() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      children: const [
+        _HintChip('اتصل بأحمد'),
+        _HintChip('روح عند مريم'),
+        _HintChip('call Mohamed'),
+        _HintChip('navigate to Sara'),
+      ],
+    );
+  }
 }
 
 class _PulsingMic extends StatefulWidget {
@@ -260,4 +272,21 @@ class _PulsingMicState extends State<_PulsingMic>
   }
 }
 
+class _HintChip extends StatelessWidget {
+  final String label;
+  const _HintChip(this.label);
 
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white12,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Text(label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12)),
+    );
+  }
+}
