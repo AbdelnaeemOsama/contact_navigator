@@ -211,47 +211,66 @@ class _KeypadPageState extends State<KeypadPage> {
   @override
   Widget build(BuildContext context) {
     final bottom = _keypadBottomInset(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
+    final hasQuery = _dialedNumber.replaceAll(RegExp(r'\D'), '').isNotEmpty ||
+        _dialedNumber.contains('+');
+
+    const sidePad = 24.0;
+    const colGap = 18.0;
+
+    // Fixed UI heights (outside keypad)
+    const topPad = 8.0;
+    const numDisplayH = 52.0;
+    const numDisplayGap = 4.0;
+    const toggledGap = 8.0;
+    const bottomPad = 4.0;
+    final suggestionsH = hasQuery ? 130.0 : 0.0;
+
+    // Max key size from screen width (3 keys per row)
+    final maxKeyFromWidth =
+        ((screenWidth - sidePad * 2 - colGap * 2) / 3).clamp(48.0, 90.0);
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          SizedBox(height: 52, child: _buildNumberDisplayWithAdd()),
-          SizedBox(
-            height: 128,
-            child: _buildAutocompleteSuggestions(),
-          ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                const horizontalPad = 10.0;
-                const gap = 5.0;
-                const actionRowHeight = 76.0;
-                const rows = 4;
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final avail = constraints.maxHeight;
 
-                final availableWidth = constraints.maxWidth - horizontalPad * 2;
-                final availableHeight =
-                    constraints.maxHeight - actionRowHeight - gap;
+          // Compute core layout safe spacing dynamically
+          const chrome = topPad + numDisplayH + numDisplayGap +
+              toggledGap + bottomPad;
+          final chromeFull = chrome + suggestionsH;
 
-                final keyByWidth = (availableWidth - gap * 2) / 3;
-                final keyByHeight = (availableHeight - gap * (rows - 1)) / rows;
-                final keySize = keyByWidth < keyByHeight ? keyByWidth : keyByHeight;
-                final clampedKeySize = keySize.clamp(58.0, 76.0);
+          final keypadAvail = (avail - chromeFull).clamp(0.0, double.infinity);
 
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _buildKeypadGrid(clampedKeySize, horizontalPad, gap),
-                    SizedBox(height: gap),
-                    _buildActionButtons(clampedKeySize, horizontalPad),
-                    const SizedBox(height: 4),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
+          const safetyMargin = 8.0;
+          const minGap = 4.0;
+          const maxGap = 18.0;
+          final safeAvail = (keypadAvail - safetyMargin).clamp(0.0, double.infinity);
+          final rawKey = (safeAvail - 4 * minGap) / 5;
+          final keySize = rawKey.clamp(40.0, maxKeyFromWidth);
+          final rowGap = ((safeAvail - keySize * 5) / 4).clamp(minGap, maxGap);
+
+          final keypadH = 5 * keySize + 4 * rowGap;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: topPad),
+              SizedBox(height: numDisplayH, child: _buildNumberDisplayWithAdd()),
+              const SizedBox(height: numDisplayGap),
+              if (hasQuery)
+                SizedBox(height: suggestionsH, child: _buildAutocompleteSuggestions()),
+              const SizedBox(height: toggledGap),
+              SizedBox(
+                height: keypadH,
+                child: _buildIosKeypad(keySize, sidePad, colGap, rowGap),
+              ),
+              const SizedBox(height: bottomPad),
+            ],
+          );
+        },
       ),
     );
   }
@@ -282,10 +301,10 @@ class _KeypadPageState extends State<KeypadPage> {
                       maxLines: 1,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 34,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 38,
+                        fontWeight: FontWeight.w400,
                         color: AppColors.textBlue,
-                        letterSpacing: 0.5,
+                        letterSpacing: 1.2,
                       ),
                     ),
                   ),
@@ -346,16 +365,18 @@ class _KeypadPageState extends State<KeypadPage> {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF1C1C1E),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: ListView.separated(
+                shrinkWrap: false,
+                physics: const ClampingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 itemCount: items.length,
                 separatorBuilder: (context, index) => const Divider(
-                  color: Colors.white10,
+                  color: Color(0xFFE0E0E0),
                   height: 1,
                   indent: 16,
                   endIndent: 16,
@@ -409,7 +430,7 @@ class _KeypadPageState extends State<KeypadPage> {
                             children: [
                               const Icon(
                                 Icons.account_circle_outlined,
-                                color: Colors.white70,
+                                color: AppColors.textBlue,
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
@@ -421,7 +442,7 @@ class _KeypadPageState extends State<KeypadPage> {
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 15,
-                                    color: Colors.white,
+                                    color: AppColors.textBlue,
                                   ),
                                 ),
                               ),
@@ -430,7 +451,7 @@ class _KeypadPageState extends State<KeypadPage> {
                                 item.phone.number,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.grey.shade400,
+                                  color: Colors.grey.shade600,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -456,147 +477,149 @@ class _KeypadPageState extends State<KeypadPage> {
     );
   }
 
-  Widget _buildKeypadGrid(double keySize, double horizontalPad, double gap) {
+  Widget _buildIosKeypad(
+    double keySize,
+    double sidePad,
+    double colGap,
+    double rowGap,
+  ) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPad),
+      padding: EdgeInsets.symmetric(horizontal: sidePad),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildRow(['1', '2', '3'], keySize, gap),
-          SizedBox(height: gap),
-          _buildRow(['4', '5', '6'], keySize, gap),
-          SizedBox(height: gap),
-          _buildRow(['7', '8', '9'], keySize, gap),
-          SizedBox(height: gap),
-          _buildRow(['*', '0', '#'], keySize, gap),
+          _iosKeyRow(['1', '2', '3'], keySize, colGap),
+          SizedBox(height: rowGap),
+          _iosKeyRow(['4', '5', '6'], keySize, colGap),
+          SizedBox(height: rowGap),
+          _iosKeyRow(['7', '8', '9'], keySize, colGap),
+          SizedBox(height: rowGap),
+          _iosKeyRow(['*', '0', '#'], keySize, colGap),
+          SizedBox(height: rowGap),
+          _iosBottomRow(keySize, colGap),
         ],
       ),
     );
   }
 
-  Widget _buildActionButtons(double keySize, double horizontalPad) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPad),
-      child: Row(
-        children: [
-          SizedBox(width: keySize),
+  Widget _iosKeyRow(List<String> labels, double keySize, double colGap) {
+    return Row(
+      children: [
+        for (var i = 0; i < labels.length; i++) ...[
+          if (i > 0) SizedBox(width: colGap),
           Expanded(
-            child: Center(
-              child: Material(
-                color: Colors.green,
-                shape: const CircleBorder(),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: _isCalling ? null : () => _makeCall(),
-                  child: SizedBox(
-                    width: keySize,
-                    height: keySize,
-                    child: _isCalling
-                        ? Padding(
-                            padding: EdgeInsets.all(keySize * 0.28),
-                            child: const CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Icon(Icons.phone, color: Colors.white, size: keySize * 0.42),
-                  ),
+            child: Center(child: _buildKey(labels[i], keySize)),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _iosBottomRow(double keySize, double colGap) {
+    return SizedBox(
+      height: keySize,
+      width: double.infinity, // Crucial: forces Stack to span full keypad grid width
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // ── Center Pill Call Button ──
+          SizedBox(
+            width: keySize * 2 + colGap,
+            height: keySize * 0.65,
+            child: Material(
+              color: Colors.green,
+              borderRadius: BorderRadius.circular(keySize),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: _isCalling ? null : () => _makeCall(),
+                child: Center(
+                  child: _isCalling
+                      ? SizedBox(
+                          width: keySize * 0.32,
+                          height: keySize * 0.32,
+                          child: const CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Icon(Icons.phone, color: Colors.white, size: keySize * 0.4),
                 ),
               ),
             ),
           ),
-          SizedBox(
-            width: keySize,
-            height: keySize,
-            child: IconButton(
-              onPressed: _dialedNumber.isNotEmpty ? _onDelete : null,
-              onLongPress: _dialedNumber.isNotEmpty ? _onDeleteLongPressed : null,
-              icon: Icon(
-                Icons.backspace_rounded,
-                size: keySize * 0.38,
-                color: _dialedNumber.isNotEmpty ? Colors.grey.shade700 : Colors.transparent,
+          // ── Right-Aligned Backspace Button ──
+          if (_dialedNumber.isNotEmpty)
+            Positioned(
+              right: 0, // Perfectly aligns right beneath the '#' column boundary
+              child: SizedBox(
+                width: keySize,
+                height: keySize,
+                child: IconButton(
+                  onPressed: _onDelete,
+                  onLongPress: _onDeleteLongPressed,
+                  icon: Icon(
+                    Icons.backspace_outlined,
+                    size: keySize * 0.36,
+                    color: AppColors.textBlue.withValues(alpha: 0.55),
+                  ),
+                ),
               ),
             ),
-          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildRow(List<String> labels, double keySize, double gap) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: labels.map((label) => _buildKey(label, keySize)).toList(),
     );
   }
 
   Widget _buildKey(String label, double size) {
     var subLabel = '';
     switch (label) {
-      case '2':
-        subLabel = 'A B C';
-        break;
-      case '3':
-        subLabel = 'D E F';
-        break;
-      case '4':
-        subLabel = 'G H I';
-        break;
-      case '5':
-        subLabel = 'J K L';
-        break;
-      case '6':
-        subLabel = 'M N O';
-        break;
-      case '7':
-        subLabel = 'P Q R S';
-        break;
-      case '8':
-        subLabel = 'T U V';
-        break;
-      case '9':
-        subLabel = 'W X Y Z';
-        break;
-      case '0':
-        subLabel = '+';
-        break;
+      case '2': subLabel = 'ABC'; break;
+      case '3': subLabel = 'DEF'; break;
+      case '4': subLabel = 'GHI'; break;
+      case '5': subLabel = 'JKL'; break;
+      case '6': subLabel = 'MNO'; break;
+      case '7': subLabel = 'PQRS'; break;
+      case '8': subLabel = 'TUV'; break;
+      case '9': subLabel = 'WXYZ'; break;
+      case '0': subLabel = '+'; break;
     }
 
     return SizedBox(
       width: size,
       height: size,
-      child: Material(
-        color: Colors.white,
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: () => _onNumberTapped(label),
-          onLongPress: label == '0' ? () => _onNumberLongPressed(label) : null,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+      child: InkWell(
+        borderRadius: BorderRadius.circular(size / 2),
+        splashColor: Colors.grey.withValues(alpha: 0.15),
+        highlightColor: Colors.grey.withValues(alpha: 0.08),
+        onTap: () => _onNumberTapped(label),
+        onLongPress: label == '0' ? () => _onNumberLongPressed(label) : null,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: size * 0.46,
+                fontWeight: FontWeight.w300,
+                height: 1.0,
+                color: AppColors.textBlue,
+              ),
+            ),
+            if (subLabel.isNotEmpty) ...[
+              SizedBox(height: size * 0.02),
               Text(
-                label,
+                subLabel,
                 style: TextStyle(
-                  fontSize: size * 0.38,
+                  fontSize: size * 0.13,
+                  height: 1.0,
+                  color: AppColors.textBlue.withValues(alpha: 0.6),
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textBlue,
+                  letterSpacing: 1.5,
                 ),
               ),
-              if (subLabel.isNotEmpty)
-                Text(
-                  subLabel,
-                  style: TextStyle(
-                    fontSize: size * 0.12,
-                    color: AppColors.textBlue.withValues(alpha: 0.7),
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-            ],
-          ),
+            ] else
+              SizedBox(height: size * 0.15),
+          ],
         ),
       ),
     );
