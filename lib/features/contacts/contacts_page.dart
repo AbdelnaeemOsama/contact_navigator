@@ -215,6 +215,9 @@ class _ContactsPageState extends State<ContactsPage> {
   }
 
   Widget? _buildFab(Color lightBlue) {
+    // No FAB at all on keypad tab
+    if (_selectedIndex == 1) return null;
+
     final List<Widget> fabs = [];
 
     if (_selectedIndex == 0) {
@@ -238,9 +241,12 @@ class _ContactsPageState extends State<ContactsPage> {
       ));
     }
 
-    fabs.add(const VoiceAssistantFab());
+    // Voice FAB only on the main contacts tab
+    if (_selectedIndex == 0) {
+      fabs.add(const VoiceAssistantFab());
+    }
 
-    if (fabs.isEmpty) return const VoiceAssistantFab();
+    if (fabs.isEmpty) return null;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
