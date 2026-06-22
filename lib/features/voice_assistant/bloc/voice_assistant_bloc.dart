@@ -30,18 +30,23 @@ class VoiceAssistantBloc
     StartListeningEvent event,
     Emitter<VoiceAssistantState> emit,
   ) async {
-    final available = await _service.initialize();
-    if (!available) {
-      emit(VoiceAssistantError('الميكروفون مش متاح'));
-      return;
+    try {
+      final available = await _service.initialize();
+      if (!available) {
+        emit(VoiceAssistantError('الميكروفون مش متاح'));
+        return;
+      }
+      emit(VoiceAssistantListening());
+      await _service.startListening(
+        onPartialResult: (text) =>
+            emit(VoiceAssistantListening(partialText: text)),
+        onFinalResult: (text) =>
+            add(SpeechResultEvent(text, isFinal: true)),
+        onError: (msg) => emit(VoiceAssistantError(msg)),
+      );
+    } catch (e) {
+      emit(VoiceAssistantError('حدث خطأ: $e'));
     }
-    emit(VoiceAssistantListening());
-    await _service.startListening(
-      onPartialResult: (text) =>
-          emit(VoiceAssistantListening(partialText: text)),
-      onFinalResult: (text) => add(SpeechResultEvent(text, isFinal: true)),
-      onError: (msg) => emit(VoiceAssistantError(msg)),
-    );
   }
 
   Future<void> _onStopListening(
