@@ -260,10 +260,6 @@ class _ContactsPageState extends State<ContactsPage> {
       ));
     }
 
-    // Don't show voice FAB on keypad tab (index 1)
-    if (_selectedIndex != 1) {
-      fabs.add(const VoiceAssistantFab());
-    }
 
     if (fabs.isEmpty) return null;
 

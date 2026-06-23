@@ -590,44 +590,47 @@ class _MapTabState extends State<MapTab> {
                 ),
             ],
           ),
-          floatingActionButton: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (_locationMessage != null &&
-                  _locationMessage!.contains('settings'))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: FloatingActionButton.small(
-                    heroTag: 'open_location_settings',
-                    onPressed: Geolocator.openAppSettings,
-                    backgroundColor: Colors.white,
-                    child: const Icon(
-                      Icons.settings,
-                      color: AppColors.primaryBlue,
+          floatingActionButton: Padding(
+            padding: const EdgeInsets.only(bottom: 100),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (_locationMessage != null &&
+                    _locationMessage!.contains('settings'))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: FloatingActionButton.small(
+                      heroTag: 'open_location_settings',
+                      onPressed: Geolocator.openAppSettings,
+                      backgroundColor: Colors.white,
+                      child: const Icon(
+                        Icons.settings,
+                        color: AppColors.primaryBlue,
+                      ),
                     ),
                   ),
-                ),
-              if (_routePoints.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: FloatingActionButton(
-                    heroTag: 'clear_route',
-                    onPressed: _clearRoute,
-                    backgroundColor: Colors.red,
-                    child: const Icon(Icons.close, color: Colors.white),
+                if (_routePoints.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: FloatingActionButton(
+                      heroTag: 'clear_route',
+                      onPressed: _clearRoute,
+                      backgroundColor: Colors.red,
+                      child: const Icon(Icons.close, color: Colors.white),
+                    ),
+                  ),
+                FloatingActionButton(
+                  heroTag: 'current_location',
+                  onPressed: _getCurrentLocation,
+                  backgroundColor: Colors.white,
+                  child: const Icon(
+                    Icons.my_location,
+                    color: AppColors.primaryBlue,
                   ),
                 ),
-              FloatingActionButton(
-                heroTag: 'current_location',
-                onPressed: _getCurrentLocation,
-                backgroundColor: Colors.white,
-                child: const Icon(
-                  Icons.my_location,
-                  color: AppColors.primaryBlue,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
