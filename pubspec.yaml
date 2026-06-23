@@ -81,7 +81,6 @@ flutter:
     - assets/images/splash.png
     - assets/images/icons/phone_call.png
     - assets/images/Phone_call_screen.png
-    - assets/images/phone.png
     - assets/images/icons/user.png
     - assets/images/icons/calling.png
     - assets/images/icons/contact.png

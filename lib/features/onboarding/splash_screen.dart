@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:contact_navigator/core/routes/app_routes.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,16 +16,9 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkFirstLaunch() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isFirstLaunch = prefs.getBool('isFirstLaunch') ?? true;
-
+    await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
-
-    if (isFirstLaunch) {
-      Navigator.pushReplacementNamed(context, AppRoutes.onboarding);
-    } else {
-      Navigator.pushReplacementNamed(context, AppRoutes.home);
-    }
+    Navigator.pushReplacementNamed(context, AppRoutes.home);
   }
 
   @override
