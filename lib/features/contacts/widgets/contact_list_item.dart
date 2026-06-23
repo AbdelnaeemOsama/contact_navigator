@@ -316,7 +316,7 @@ class ContactListItem extends StatelessWidget {
       );
       return;
     }
-
+     // to call phone numbers directly 
     try {
       await FlutterPhoneDirectCaller.callNumber(phone);
     } catch (_) {
@@ -327,7 +327,7 @@ class ContactListItem extends StatelessWidget {
       }
     }
   }
-
+     // to show multiple phone numbers 
   void _showPhonePicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -353,7 +353,7 @@ class ContactListItem extends StatelessWidget {
       ),
     );
   }
-
+  // to show locations of contact 
   void _showLocationPicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -378,7 +378,7 @@ class ContactListItem extends StatelessWidget {
             ));
           }
         }
-
+       //  display locations 
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
@@ -393,7 +393,7 @@ class ContactListItem extends StatelessWidget {
       },
     );
   }
-
+  // to show remove from group dialog 
   void _showRemoveFromGroupDialog(BuildContext context) {
     final displayName = contact.displayName ?? 'this contact';
     showDialog(
@@ -417,7 +417,7 @@ class ContactListItem extends StatelessWidget {
       ),
     );
   }
-
+   //  to get formatted name 
   String _getFormattedName(Contact contact, ContactNameFormat format) {
     final first = contact.name?.first ?? '';
     final last = contact.name?.last ?? '';

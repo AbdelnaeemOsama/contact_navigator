@@ -41,7 +41,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
   }
 
   Timer? _debounceTimer;
-
+  // close the stream subscription and debounce timer
   @override
   Future<void> close() {
     _contactsSubscription?.cancel();
@@ -49,14 +49,20 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     return super.close();
   }
 
-  void _onClearSnackBar(ClearContactsSnackBarEvent event, Emitter<ContactsState> emit) {
+  void _onClearSnackBar(
+    ClearContactsSnackBarEvent event,
+    Emitter<ContactsState> emit,
+  ) {
     final s = state;
     if (s is ContactsLoaded) {
       emit(s.copyWith(clearSnack: true));
     }
   }
 
-  void _onClearNavigationAck(ClearContactsNavigationAckEvent event, Emitter<ContactsState> emit) {
+  void _onClearNavigationAck(
+    ClearContactsNavigationAckEvent event,
+    Emitter<ContactsState> emit,
+  ) {
     final s = state;
     if (s is ContactsLoaded) {
       emit(s.copyWith(clearNav: true));
@@ -67,7 +73,9 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     LoadContactsEvent event,
     Emitter<ContactsState> emit,
   ) async {
-    final ContactsLoaded? priorLoaded = state is ContactsLoaded ? state as ContactsLoaded : null;
+    final ContactsLoaded? priorLoaded = state is ContactsLoaded
+        ? state as ContactsLoaded
+        : null;
 
     try {
       final hasPermission = await _contactService.requestPermission();
@@ -75,14 +83,16 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
         emit(ContactsPermissionDenied());
         return;
       }
-
+      // load contacts with properties and photo
       final contacts = await _contactService.getContacts(
         withProperties: true,
         withPhoto: false,
       );
 
-      final sortOrder = priorLoaded?.sortOrder ?? _settingsService.getSortOrder();
-      final nameFormat = priorLoaded?.nameFormat ?? _settingsService.getNameFormat();
+      final sortOrder =
+          priorLoaded?.sortOrder ?? _settingsService.getSortOrder();
+      final nameFormat =
+          priorLoaded?.nameFormat ?? _settingsService.getNameFormat();
       final query = priorLoaded?.searchQuery ?? '';
 
       _sortContacts(contacts, sortOrder);
@@ -141,6 +151,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     return filtered;
   }
 
+  //to search contacts
   Future<void> _onSearchContacts(
     SearchContactsEvent event,
     Emitter<ContactsState> emit,
@@ -159,7 +170,11 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
           ),
         );
       } else {
-        final filtered = _filterContactsByQuery(currentState.allContacts, query, currentState.sortOrder);
+        final filtered = _filterContactsByQuery(
+          currentState.allContacts,
+          query,
+          currentState.sortOrder,
+        );
         emit(
           currentState.copyWith(
             filteredContacts: filtered,
@@ -172,6 +187,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     }
   }
 
+  //to create contact
   Future<void> _onCreateContact(
     CreateContactEvent event,
     Emitter<ContactsState> emit,
@@ -203,6 +219,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     }
   }
 
+  //to update contact
   Future<void> _onUpdateContact(
     UpdateContactEvent event,
     Emitter<ContactsState> emit,
@@ -214,10 +231,13 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
         await _groupService.removeContactFromAllGroups(event.contact.id!);
         if (event.groupId != null) {
           await Future<void>.delayed(const Duration(milliseconds: 200));
-          await _groupService.addContactToGroup(event.contact.id!, event.groupId!);
+          await _groupService.addContactToGroup(
+            event.contact.id!,
+            event.groupId!,
+          );
         }
       }
-
+      //to reload after
       await _reloadAfterMutation(
         emit,
         snackbarMessage: 'Contact updated successfully',
@@ -228,6 +248,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     }
   }
 
+  //to delete contact
   Future<void> _onDeleteContact(
     DeleteContactEvent event,
     Emitter<ContactsState> emit,
@@ -243,6 +264,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     }
   }
 
+  //to toggle favorite
   Future<void> _onToggleFavorite(
     ToggleFavoriteEvent event,
     Emitter<ContactsState> emit,
@@ -257,6 +279,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     }
   }
 
+  //to add multiple contacts to group
   Future<void> _onAddMultipleToGroup(
     AddMultipleToGroupEvent event,
     Emitter<ContactsState> emit,
@@ -292,7 +315,9 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     String? snackbarMessage,
     String? navigationAck,
   }) async {
-    final priorLoaded = state is ContactsLoaded ? state as ContactsLoaded : null;
+    final priorLoaded = state is ContactsLoaded
+        ? state as ContactsLoaded
+        : null;
     final silent = priorLoaded != null;
     await _onLoadContacts(
       LoadContactsEvent(
@@ -347,9 +372,10 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
       final primaryCompare = primaryA.compareTo(primaryB);
       if (primaryCompare != 0) return primaryCompare;
 
-      return _sortSecondaryName(a, sortOrder).compareTo(
-        _sortSecondaryName(b, sortOrder),
-      );
+      return _sortSecondaryName(
+        a,
+        sortOrder,
+      ).compareTo(_sortSecondaryName(b, sortOrder));
     });
   }
 
