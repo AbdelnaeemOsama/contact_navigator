@@ -37,14 +37,14 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
     _reloadDebounce?.cancel();
     return super.close();
   }
-
+  //  to reload categories when there is a change in contact list or group list
   void _scheduleReload() {
     _reloadDebounce?.cancel();
     _reloadDebounce = Timer(const Duration(milliseconds: 600), () {
       add(LoadCategoriesEvent());
     });
   }
-
+ //to load categories
   Future<void> _onLoadCategories(
     LoadCategoriesEvent event,
     Emitter<CategoriesState> emit,
@@ -61,7 +61,7 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
       emit(CategoriesError(e.toString()));
     }
   }
-
+   //to search categories
   void _onSearchCategories(
     SearchCategoriesEvent event,
     Emitter<CategoriesState> emit,
@@ -89,7 +89,7 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
       }
     }
   }
-
+  //to add category 
   Future<void> _onAddCategory(
     AddCategoryEvent event,
     Emitter<CategoriesState> emit,
@@ -102,7 +102,7 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
       emit(CategoriesError(e.toString()));
     }
   }
-
+   //to delete category 
   Future<void> _onDeleteCategory(
     DeleteCategoryEvent event,
     Emitter<CategoriesState> emit,
@@ -115,7 +115,7 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
       emit(CategoriesError(e.toString()));
     }
   }
-
+  //to update name of category 
   Future<void> _onUpdateCategory(
     UpdateCategoryEvent event,
     Emitter<CategoriesState> emit,

@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:contact_navigator/core/services/settings_service.dart';
 import 'package:contact_navigator/core/services/app_links_service.dart';
 
+// نقطة انطلاق التطبيق الرئيسية، تقوم بتهيئة الإعدادات وقراءة التفضيلات المشتركة
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
@@ -23,6 +24,7 @@ void main() async {
   runApp(ContactNavigatorApp(settingsService: settingsService, prefs: prefs));
 }
 
+// الكلاس الرئيسي للتطبيق ContactNavigatorApp المسؤول عن توفير مزودي الخدمات والمتحكمات (BLoCs)
 class ContactNavigatorApp extends StatelessWidget {
   final SettingsService settingsService;
   final SharedPreferences prefs;
@@ -32,6 +34,7 @@ class ContactNavigatorApp extends StatelessWidget {
     required this.prefs,
   });
 
+  // بناء شجرة الوجيات الرئيسية وتزويد المتحكمات والخدمات لكافة أجزاء التطبيق
   @override
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
@@ -82,6 +85,7 @@ class ContactNavigatorApp extends StatelessWidget {
   }
 }
 
+// ويدجيت تهيئة التطبيق وإعداد روابط التوجيه الخارجية (App Links)
 class AppInitializer extends StatefulWidget {
   const AppInitializer({super.key});
 
@@ -89,21 +93,25 @@ class AppInitializer extends StatefulWidget {
   State<AppInitializer> createState() => _AppInitializerState();
 }
 
+// حالة تهيئة التطبيق التي تتعامل مع الروابط العميقة وإدارة دورة حياة الخدمة
 class _AppInitializerState extends State<AppInitializer> {
   late final AppLinksService _appLinksService;
 
+  // تهيئة الخدمة عند بدء تشغيل حالة الويدجيت
   @override
   void initState() {
     super.initState();
     _appLinksService = AppLinksService(context.read<ContactsBloc>())..init();
   }
 
+  // تنظيف موارد الخدمة عند إغلاق الويدجيت
   @override
   void dispose() {
     _appLinksService.dispose();
     super.dispose();
   }
 
+  // بناء واجهة التطبيق الرئيسية وتطبيق السمة الأساسية ونظام التوجيه
   @override
   Widget build(BuildContext context) {
     return MaterialApp(

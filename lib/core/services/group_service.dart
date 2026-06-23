@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:uuid/uuid.dart';
 
+// كلاس يمثل فئة أو تصنيف لجهات الاتصال ويحتوي على عدد جهات الاتصال المنتمية له
 class Category {
   final String id;
   final String name;
@@ -16,18 +17,37 @@ class Category {
   });
 }
 
+// واجهة خدمة إدارة تصنيفات ومجموعات جهات الاتصال محلياً
 abstract class IGroupService {
+  // تدفق الأحداث لمعرفة متى تتغير المجموعات
   Stream<void> get onGroupsChanged;
+
+  // جلب كافة المجموعات المسجلة
   Future<List<Category>> getGroups({bool withContactCount = true});
+
+  // إنشاء مجموعة جديدة بالاسم المحدد
   Future<Category> createGroup(String name);
+
+  // حذف مجموعة محددة باستخدام معرّفها
   Future<void> deleteGroup(String groupId);
+
+  // جلب جهات الاتصال التي تنتمي إلى مجموعة معينة
   Future<List<Contact>> getContactsInGroup(String groupId, {List<Contact>? allContacts});
+
+  // إضافة جهة اتصال معينة إلى مجموعة محددة
   Future<void> addContactToGroup(String contactId, String groupId);
+
+  // إزالة جهة اتصال معينة من مجموعة محددة
   Future<void> removeContactFromGroup(String contactId, String groupId);
+
+  // إزالة جهة اتصال معينة من كافة المجموعات المسجلة
   Future<void> removeContactFromAllGroups(String contactId);
+
+  // تعديل اسم مجموعة حالية
   Future<void> updateGroup(String groupId, String newName);
 }
 
+// تنفيذ خدمة إدارة مجموعات جهات الاتصال محلياً بالاعتماد على SharedPreferences لحفظ البيانات
 class GroupService implements IGroupService {
   static const String _groupsKey = 'local_contact_groups';
   static const String _groupMappingKey = 'local_group_mapping';
@@ -39,14 +59,17 @@ class GroupService implements IGroupService {
   @override
   Stream<void> get onGroupsChanged => _changeController.stream;
 
+  // إرسال تنبيه للمستمعين عند حدوث تغيير في المجموعات
   void _notifyListeners() => _changeController.add(null);
 
+  // قراءة خريطة المجموعات المخزنة محلياً
   Future<Map<String, String>> _loadGroupsMap() async {
     final str = _prefs.getString(_groupsKey);
     if (str == null) return {};
     return Map<String, String>.from(jsonDecode(str));
   }
 
+  // قراءة خريطة العلاقات بين جهات الاتصال والمجموعات
   Future<Map<String, List<String>>> _loadMapping() async {
     final str = _prefs.getString(_groupMappingKey);
     if (str == null) return {};
@@ -54,14 +77,17 @@ class GroupService implements IGroupService {
     return decoded.map((k, v) => MapEntry(k, List<String>.from(v)));
   }
 
+  // حفظ خريطة المجموعات محلياً
   Future<void> _saveGroupsMap(Map<String, String> groups) async {
     await _prefs.setString(_groupsKey, jsonEncode(groups));
   }
 
+  // حفظ خريطة العلاقات بين جهات الاتصال والمجموعات محلياً
   Future<void> _saveMapping(Map<String, List<String>> mapping) async {
     await _prefs.setString(_groupMappingKey, jsonEncode(mapping));
   }
 
+  // جلب كافة المجموعات مع خيار حساب عدد الأعضاء في كل منها
   @override
   Future<List<Category>> getGroups({bool withContactCount = true}) async {
     final groupsMap = await _loadGroupsMap();
@@ -76,6 +102,7 @@ class GroupService implements IGroupService {
     }).toList();
   }
 
+  // إنشاء مجموعة جديدة وتوليد معرف فريد لها وحفظ التغييرات
   @override
   Future<Category> createGroup(String name) async {
     final groupsMap = await _loadGroupsMap();
@@ -86,6 +113,7 @@ class GroupService implements IGroupService {
     return Category(id: id, name: name);
   }
 
+  // حذف مجموعة محددة والتأثيرات المرتبطة بها في خرائط العلاقات
   @override
   Future<void> deleteGroup(String groupId) async {
     final groupsMap = await _loadGroupsMap();
@@ -98,6 +126,7 @@ class GroupService implements IGroupService {
     _notifyListeners();
   }
 
+  // جلب قائمة جهات الاتصال التي تنتمي إلى مجموعة معينة بالاعتماد على العلاقات المخزنة
   @override
   Future<List<Contact>> getContactsInGroup(String groupId, {List<Contact>? allContacts}) async {
     final mapping = await _loadMapping();
@@ -109,6 +138,7 @@ class GroupService implements IGroupService {
     return contactsToSearch.where((c) => contactIds.contains(c.id)).toList();
   }
 
+  // إضافة جهة اتصال لمجموعة معينة وحفظ التغيير
   @override
   Future<void> addContactToGroup(String contactId, String groupId) async {
     final mapping = await _loadMapping();
@@ -121,6 +151,7 @@ class GroupService implements IGroupService {
     }
   }
 
+  // إزالة جهة اتصال من مجموعة معينة وحفظ التغيير
   @override
   Future<void> removeContactFromGroup(String contactId, String groupId) async {
     final mapping = await _loadMapping();
@@ -133,6 +164,7 @@ class GroupService implements IGroupService {
     }
   }
 
+  // إزالة جهة اتصال من كافة المجموعات التي تنتمي إليها
   @override
   Future<void> removeContactFromAllGroups(String contactId) async {
     final mapping = await _loadMapping();
@@ -149,6 +181,7 @@ class GroupService implements IGroupService {
     }
   }
 
+  // تحديث اسم مجموعة حالية وحفظ التغييرات
   @override
   Future<void> updateGroup(String groupId, String newName) async {
     final groupsMap = await _loadGroupsMap();
@@ -159,6 +192,7 @@ class GroupService implements IGroupService {
     }
   }
 
+  // إغلاق متحكم تدفق التغييرات
   void dispose() {
     _changeController.close();
   }

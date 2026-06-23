@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -14,6 +16,7 @@ import 'package:contact_navigator/core/services/voice_service.dart';
 import 'package:contact_navigator/features/map/widgets/map_search_bar.dart';
 import 'package:contact_navigator/features/map/widgets/contact_preview_sheet.dart';
 import 'package:contact_navigator/features/map/widgets/route_info_sheet.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MapTab extends StatefulWidget {
   final LatLng? focusLocation;
@@ -35,9 +38,15 @@ class _MapTabState extends State<MapTab> {
   bool _isSearching = false;
   String? _locationMessage;
 
+  final Map<String, LatLng> _geocodedAddresses = {};
+  final Set<String> _pendingGeocodes = {};
+  late SharedPreferences _prefs;
+  bool _prefsInitialized = false;
+
   @override
   void initState() {
     super.initState();
+    _initPrefs();
     _checkLocationPermission();
     if (widget.focusLocation != null) {
       _focusedLocation = widget.focusLocation;
@@ -61,13 +70,70 @@ class _MapTabState extends State<MapTab> {
     SystemChannels.textInput.invokeMethod('TextInput.hide');
   }
 
+  Future<void> _initPrefs() async {
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      final cachedData = _prefs.getString('geocoded_locations_cache');
+      if (cachedData != null) {
+        final Map<String, dynamic> jsonMap = json.decode(cachedData);
+        final Map<String, LatLng> parsedCache = {};
+        jsonMap.forEach((key, value) {
+          final parts = value.toString().split(',');
+          if (parts.length == 2) {
+            final lat = double.tryParse(parts[0]);
+            final lng = double.tryParse(parts[1]);
+            if (lat != null && lng != null) {
+              parsedCache[key] = LatLng(lat, lng);
+            }
+          }
+        });
+        if (mounted) {
+          setState(() {
+            _geocodedAddresses.addAll(parsedCache);
+          });
+        }
+      }
+      _prefsInitialized = true;
+    } catch (e) {
+      debugPrint('Error initializing prefs or parsing cache: $e');
+    }
+  }
+
+  void _geocodeAddressAsync(String address) {
+    if (_pendingGeocodes.contains(address) || _geocodedAddresses.containsKey(address)) {
+      return;
+    }
+    _pendingGeocodes.add(address);
+
+    locationFromAddress(address).then((locations) {
+      if (locations.isNotEmpty) {
+        final latLng = LatLng(locations.first.latitude, locations.first.longitude);
+        if (mounted) {
+          setState(() {
+            _geocodedAddresses[address] = latLng;
+          });
+        }
+        if (_prefsInitialized) {
+          final cacheMap = _geocodedAddresses.map((key, val) => MapEntry(key, "${val.latitude},${val.longitude}"));
+          _prefs.setString('geocoded_locations_cache', json.encode(cacheMap));
+        }
+      }
+      _pendingGeocodes.remove(address);
+    }).catchError((error) {
+      debugPrint('Error geocoding address "$address": $error');
+      _pendingGeocodes.remove(address);
+    });
+  }
+
   Future<void> _checkLocationPermission() async {
     bool serviceEnabled;
     LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      setState(() => _locationMessage = 'Location services are disabled.');
+      if (mounted) {
+        setState(() => _locationMessage = 'Location services are disabled.');
+      }
       return;
     }
 
@@ -75,15 +141,19 @@ class _MapTabState extends State<MapTab> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        setState(() => _locationMessage = 'Location permissions are denied.');
+        if (mounted) {
+          setState(() => _locationMessage = 'Location permissions are denied.');
+        }
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      setState(
-        () => _locationMessage = 'Location permissions are permanently denied.',
-      );
+      if (mounted) {
+        setState(
+          () => _locationMessage = 'Location permissions are permanently denied. Please enable them in settings.',
+        );
+      }
       return;
     }
 
@@ -266,12 +336,6 @@ class _MapTabState extends State<MapTab> {
     );
   }
 
-  /// Returns the first valid LatLng for the contact (used for search checks).
-  LatLng? _getContactLocation(Contact contact) {
-    final all = _getAllContactLocations(contact);
-    return all.isEmpty ? null : all.first;
-  }
-
   /// Returns ALL valid LatLng positions for a contact.
   /// Tries every website URL for each address (not just same-index pairing).
   List<LatLng> _getAllContactLocations(Contact contact) {
@@ -285,8 +349,21 @@ class _MapTabState extends State<MapTab> {
 
     // Second: try each address text
     for (final address in contact.addresses) {
-      final parsed = MapUtils.parseLocationLink(address.formatted ?? '');
-      if (parsed != null) results.add(parsed);
+      final text = address.formatted ?? '';
+      if (text.isEmpty) continue;
+
+      final parsed = MapUtils.parseLocationLink(text);
+      if (parsed != null) {
+        results.add(parsed);
+      } else {
+        // Fallback to cache or geocode asynchronously
+        final cached = _geocodedAddresses[text];
+        if (cached != null) {
+          results.add(cached);
+        } else {
+          _geocodeAddressAsync(text);
+        }
+      }
     }
 
     return results.toList();
@@ -297,19 +374,26 @@ class _MapTabState extends State<MapTab> {
     final query = _searchController.text.trim().toLowerCase();
     if (query.isEmpty) return const SizedBox.shrink();
 
-    final allWithLocations = state.allContacts.where((contact) {
-      return _getContactLocation(contact) != null;
-    }).toList();
-
-    final matching = allWithLocations.where((contact) {
+    final List<_MapSearchResult> results = [];
+    for (final contact in state.allContacts) {
       final name = (contact.displayName ?? '').toLowerCase();
       final phone = contact.phones.isNotEmpty
           ? contact.phones.first.number.replaceAll(RegExp(r'\D'), '')
           : '';
-      return name.contains(query) || phone.contains(query);
-    }).toList();
+      if (name.contains(query) || phone.contains(query)) {
+        final locations = _getAllContactLocations(contact);
+        for (int i = 0; i < locations.length; i++) {
+          final loc = locations[i];
+          String label = 'Location ${i + 1}';
+          if (i < contact.addresses.length && contact.addresses[i].formatted?.isNotEmpty == true) {
+            label = contact.addresses[i].formatted!;
+          }
+          results.add(_MapSearchResult(contact: contact, location: loc, label: label));
+        }
+      }
+    }
 
-    if (matching.isEmpty) {
+    if (results.isEmpty) {
       return Material(
         elevation: 6,
         borderRadius: BorderRadius.circular(16),
@@ -334,13 +418,12 @@ class _MapTabState extends State<MapTab> {
         child: ListView.separated(
           shrinkWrap: true,
           padding: EdgeInsets.zero,
-          itemCount: matching.length,
+          itemCount: results.length,
           separatorBuilder: (context, index) => const Divider(height: 1),
           itemBuilder: (context, index) {
-            final contact = matching[index];
-            final name = contact.displayName ?? 'Unknown';
-            final photo = contact.photo?.thumbnail;
-            final loc = _getContactLocation(contact)!;
+            final item = results[index];
+            final name = item.contact.displayName ?? 'Unknown';
+            final photo = item.contact.photo?.thumbnail;
 
             return ListTile(
               leading: CircleAvatar(
@@ -358,26 +441,28 @@ class _MapTabState extends State<MapTab> {
                     : null,
               ),
               title: Text(
-                name,
+                '$name (${item.label})',
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   color: AppColors.textBlue,
                   fontSize: 15,
                 ),
               ),
-              subtitle: contact.phones.isNotEmpty
+              subtitle: item.contact.phones.isNotEmpty
                   ? Text(
-                      contact.phones.first.number,
+                      item.contact.phones.first.number,
                       style: const TextStyle(fontSize: 12),
                     )
                   : null,
               onTap: () {
                 _dismissKeyboard();
-                _mapController.move(loc, 15);
-                setState(() {
-                  _focusedLocation = loc;
-                });
-                _showContactPreview(contact, focusLatLng: loc);
+                _mapController.move(item.location, 15);
+                if (mounted) {
+                  setState(() {
+                    _focusedLocation = item.location;
+                  });
+                }
+                _showContactPreview(item.contact, focusLatLng: item.location);
                 _searchController.clear();
               },
             );
@@ -393,47 +478,42 @@ class _MapTabState extends State<MapTab> {
       builder: (context, state) {
         List<Marker> markers = [];
         if (state is ContactsLoaded) {
+          final List<_MapMarkerItem> markerItems = [];
           for (var contact in state.allContacts) {
             final locations = _getAllContactLocations(contact);
             for (final parsed in locations) {
-              markers.add(
-                Marker(
-                  point: parsed,
-                  width: 50,
-                  height: 50,
-                  child: GestureDetector(
-                    onTap: () =>
-                        _showContactPreview(contact, focusLatLng: parsed),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.white,
-                        backgroundImage: contact.photo?.thumbnail != null
-                            ? MemoryImage(contact.photo!.thumbnail!)
-                            : null,
-                        child: contact.photo?.thumbnail == null
-                            ? const Icon(
-                                Icons.person,
-                                color: Color(0xFF33A1E5),
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                ),
-              );
+              markerItems.add(_MapMarkerItem(contact: contact, latLng: parsed));
+            }
+          }
+
+          // Group by coordinate rounded to 5 decimal places (approx 1 meter)
+          final Map<String, List<_MapMarkerItem>> grouped = {};
+          for (final item in markerItems) {
+            final key = "${item.latLng.latitude.toStringAsFixed(5)}_${item.latLng.longitude.toStringAsFixed(5)}";
+            grouped.putIfAbsent(key, () => []).add(item);
+          }
+
+          // Add contact markers with dynamic offset for overlapping ones
+          for (final entry in grouped.entries) {
+            final list = entry.value;
+            if (list.length == 1) {
+              final item = list.first;
+              markers.add(_buildContactMarker(item.contact, item.latLng));
+            } else {
+              // Apply radial offsets
+              for (int i = 0; i < list.length; i++) {
+                final item = list[i];
+                final angle = 2 * math.pi * i / list.length;
+                // Radius of approx 0.00015 degrees (approx 15 meters) spreads them nicely
+                const radius = 0.00015;
+                final latOffset = radius * math.cos(angle);
+                final lngOffset = radius * math.sin(angle) / math.cos(item.latLng.latitude * math.pi / 180);
+                final shiftedLatLng = LatLng(
+                  item.latLng.latitude + latOffset,
+                  item.latLng.longitude + lngOffset,
+                );
+                markers.add(_buildContactMarker(item.contact, shiftedLatLng, originalLatLng: item.latLng));
+              }
             }
           }
         }
@@ -622,7 +702,7 @@ class _MapTabState extends State<MapTab> {
                   ),
                 FloatingActionButton(
                   heroTag: 'current_location',
-                  onPressed: _getCurrentLocation,
+                  onPressed: _checkLocationPermission,
                   backgroundColor: Colors.white,
                   child: const Icon(
                     Icons.my_location,
@@ -659,10 +739,10 @@ class _MapTabState extends State<MapTab> {
         _mapController.move(loc, 15);
         if (mounted) {
           context.read<VoiceAssistantService>().speak('Found $query');
+          setState(() {
+            _focusedLocation = loc;
+          });
         }
-        setState(() {
-          _focusedLocation = loc;
-        });
       } else {
         if (mounted) {
           ScaffoldMessenger.of(
@@ -720,21 +800,122 @@ class _MapTabState extends State<MapTab> {
     }
   }
 
+  Future<LatLng?> _showContactLocationPicker(Contact contact) async {
+    final locations = <MapEntry<String, LatLng>>[];
+
+    for (int i = 0; i < contact.websites.length; i++) {
+      final loc = MapUtils.parseLocationLink(contact.websites[i].url);
+      if (loc != null) {
+        String label = 'Location ${locations.length + 1}';
+        if (i < contact.addresses.length && contact.addresses[i].formatted?.isNotEmpty == true) {
+          label = contact.addresses[i].formatted!;
+        }
+        locations.add(MapEntry(label, loc));
+      }
+    }
+
+    for (final addr in contact.addresses) {
+      final text = addr.formatted ?? '';
+      if (text.isEmpty) continue;
+      LatLng? loc = MapUtils.parseLocationLink(text);
+      loc ??= _geocodedAddresses[text];
+      if (loc != null) {
+        if (!locations.any((e) => e.value.latitude == loc!.latitude && e.value.longitude == loc.longitude)) {
+          locations.add(MapEntry(text, loc));
+        }
+      }
+    }
+
+    if (locations.isEmpty) return null;
+    if (locations.length == 1) return locations.first.value;
+
+    return await showModalBottomSheet<LatLng>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[350],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Choose Destination Address',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF004080),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: locations.length,
+                  itemBuilder: (context, index) {
+                    final entry = locations[index];
+                    return ListTile(
+                      leading: const Icon(Icons.location_on, color: Colors.red),
+                      title: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      onTap: () => Navigator.pop(context, entry.value),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _getDirections(Contact contact, LatLng? targetLatLng) async {
     LatLng? dest = targetLatLng;
-    dest ??= _getContactLocation(contact);
 
-    if (dest == null || _currentLocation == null) {
+    if (dest == null) {
+      final locations = _getAllContactLocations(contact);
+      if (locations.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No location saved for this contact.'),
+          ),
+        );
+        return;
+      } else if (locations.length > 1) {
+        final chosen = await _showContactLocationPicker(contact);
+        if (chosen == null) return;
+        dest = chosen;
+      } else {
+        dest = locations.first;
+      }
+    }
+
+    if (_currentLocation == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Unable to determine start or end location.'),
+          content: Text('Unable to determine start location. Make sure GPS is enabled.'),
         ),
       );
       return;
     }
 
     // Close the contact preview sheet first
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
     _dismissKeyboard();
 
     // Show transport mode picker
@@ -757,4 +938,56 @@ class _MapTabState extends State<MapTab> {
     _dismissKeyboard();
     await _fetchRoute(dest, profile);
   }
+
+  Marker _buildContactMarker(Contact contact, LatLng displayLatLng, {LatLng? originalLatLng}) {
+    final routeTarget = originalLatLng ?? displayLatLng;
+    return Marker(
+      point: displayLatLng,
+      width: 50,
+      height: 50,
+      child: GestureDetector(
+        onTap: () => _showContactPreview(contact, focusLatLng: routeTarget),
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.white,
+            backgroundImage: contact.photo?.thumbnail != null
+                ? MemoryImage(contact.photo!.thumbnail!)
+                : null,
+            child: contact.photo?.thumbnail == null
+                ? const Icon(
+                    Icons.person,
+                    color: Color(0xFF33A1E5),
+                  )
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MapMarkerItem {
+  final Contact contact;
+  final LatLng latLng;
+  _MapMarkerItem({required this.contact, required this.latLng});
+}
+
+class _MapSearchResult {
+  final Contact contact;
+  final LatLng location;
+  final String label;
+  _MapSearchResult({required this.contact, required this.location, required this.label});
 }

@@ -3,11 +3,13 @@ import 'package:contact_navigator/features/onboarding/splash_screen.dart';
 import 'package:contact_navigator/features/onboarding/onboarding_screen.dart';
 import 'package:contact_navigator/features/contacts/contacts_page.dart';
 
+// كلاس إدارة مسارات التطبيق والتوجيه بين الشاشات المختلفة
 class AppRoutes {
   static const String splash = '/';
   static const String onboarding = '/onboarding';
   static const String home = '/home';
 
+  // توليد وتحديد المسار المناسب بناءً على اسم المسار المرسل
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case splash:

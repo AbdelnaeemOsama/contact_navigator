@@ -15,6 +15,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:contact_navigator/core/utils/text_utils.dart';
 
+// صفحة إضافة وتعديل جهات الاتصال
 class AddContactPage extends StatefulWidget {
   final Contact? contactToEdit;
   final String? groupId;
@@ -26,6 +27,7 @@ class AddContactPage extends StatefulWidget {
   State<AddContactPage> createState() => _AddContactPageState();
 }
 
+// نموذج بيانات حقل إدخال الهاتف
 class PhoneInput {
   final TextEditingController controller;
   final TextEditingController customLabelController;
@@ -33,12 +35,14 @@ class PhoneInput {
   PhoneInput({String number = '', String customLabel = '', this.label = PhoneLabel.mobile})
       : controller = TextEditingController(text: number),
         customLabelController = TextEditingController(text: customLabel);
+  // تنظيف موارد حقل إدخال الهاتف
   void dispose() {
     controller.dispose();
     customLabelController.dispose();
   }
 }
 
+// نموذج بيانات حقل إدخال البريد الإلكتروني
 class EmailInput {
   final TextEditingController controller;
   final TextEditingController customLabelController;
@@ -46,24 +50,28 @@ class EmailInput {
   EmailInput({String address = '', String customLabel = '', this.label = EmailLabel.home})
       : controller = TextEditingController(text: address),
         customLabelController = TextEditingController(text: customLabel);
+  // تنظيف موارد حقل إدخال البريد
   void dispose() {
     controller.dispose();
     customLabelController.dispose();
   }
 }
 
+// نموذج بيانات حقل إدخال العنوان ورابط الموقع الجغرافي
 class AddressInput {
   final TextEditingController controller;
   final TextEditingController linkController;
   AddressInput({String formatted = '', String link = ''})
       : controller = TextEditingController(text: formatted),
         linkController = TextEditingController(text: link);
+  // تنظيف موارد حقل إدخال العنوان
   void dispose() {
     controller.dispose();
     linkController.dispose();
   }
 }
 
+// حالة صفحة إضافة وتعديل جهات الاتصال
 class _AddContactPageState extends State<AddContactPage> {
   XFile? _selectedImage;
   final ImagePicker _picker = ImagePicker();
@@ -80,6 +88,7 @@ class _AddContactPageState extends State<AddContactPage> {
   String? _selectedGroupId;
   List<Category> _availableGroups = [];
 
+  // تهيئة حقول إدخال جهة الاتصال الحالية عند التعديل أو تجهيز الحقول الفارغة لجهة اتصال جديدة
   @override
   void initState() {
     super.initState();
@@ -137,6 +146,7 @@ class _AddContactPageState extends State<AddContactPage> {
     _loadGroups();
   }
 
+  // جلب كافة التصنيفات المتاحة لتحديد التصنيف الحالي لجهة الاتصال
   Future<void> _loadGroups() async {
     try {
       final groupService = RepositoryProvider.of<IGroupService>(context);
@@ -166,6 +176,7 @@ class _AddContactPageState extends State<AddContactPage> {
     }
   }
 
+  // إغلاق الحقول والتخلص من متحكمات النصوص لمنع تسريب الذاكرة
   @override
   void dispose() {
     _firstNameController.dispose();
@@ -183,6 +194,7 @@ class _AddContactPageState extends State<AddContactPage> {
     super.dispose();
   }
 
+  // فتح معرض الصور لاختيار صورة شخصية لجهة الاتصال
   Future<void> _pickImage() async {
     try {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -196,6 +208,7 @@ class _AddContactPageState extends State<AddContactPage> {
     }
   }
 
+  // فتح شاشة تحديد العنوان الجغرافي واستقبال النتيجة لتحديث الحقول
   Future<void> _openAddressPage(AddressInput input) async {
     final result = await Navigator.push<Map<String, String>>(
       context,
@@ -218,6 +231,7 @@ class _AddContactPageState extends State<AddContactPage> {
     }
   }
 
+  // حفظ بيانات جهة الاتصال (إنشاء جديد أو تحديث حالي) وإرسال حدث لـ ContactsBloc
   Future<void> _saveContact() async {
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
@@ -300,6 +314,7 @@ class _AddContactPageState extends State<AddContactPage> {
     }
   }
 
+  // عرض شريط تنبيه منبثق برسالة معينة
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -609,6 +624,7 @@ class _AddContactPageState extends State<AddContactPage> {
     );
   }
 
+  // بناء مجموعة حقول إدخال الهاتف المحددة مع قائمة منسدلة لاختيار نوع الهاتف (جوال، عمل، منزل، إلخ)
   Widget _buildPhoneField(int index) {
     final input = _phoneInputs[index];
     return Column(
@@ -653,6 +669,7 @@ class _AddContactPageState extends State<AddContactPage> {
     );
   }
 
+  // بناء حقل إدخال البريد الإلكتروني مع خيارات التسمية (منزل، عمل، مخصص)
   Widget _buildEmailField(int index) {
     final input = _emailInputs[index];
     return Column(
@@ -695,6 +712,7 @@ class _AddContactPageState extends State<AddContactPage> {
     );
   }
 
+  // بناء حقل إدخال العنوان الجغرافي مدمجاً معه معاينة مصغرة للخريطة التفاعلية
   Widget _buildAddressField(int index) {
     final input = _addressInputs[index];
     return Column(
@@ -818,6 +836,7 @@ class _AddContactPageState extends State<AddContactPage> {
     );
   }
 
+  // بناء أداة اختيار تصنيف/مجموعة جهة الاتصال (Category Picker)
   Widget _buildCategoryPicker() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

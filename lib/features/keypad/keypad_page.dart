@@ -367,19 +367,17 @@ class _KeypadPageState extends State<KeypadPage> {
                         if (direction == DismissDirection.startToEnd) {
                           await _makeCall(item.phone.number);
                         } else if (direction == DismissDirection.endToStart) {
-                          final link = item.contact.websites.isNotEmpty ? item.contact.websites.first.url : '';
-                          var latLng = MapUtils.parseLocationLink(link);
-                          if (latLng == null && item.contact.addresses.isNotEmpty) {
-                            latLng = MapUtils.parseLocationLink(item.contact.addresses.first.formatted ?? '');
-                          }
-                          if (latLng != null) {
-                            widget.onNavigateToMap?.call(latLng);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('No location saved for this contact')),
-                            );
-                          }
-                        }
+                          final validLocations = _getValidLocations(item.contact);
+
+                        if (validLocations.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('No location saved for this contact')),
+                          );
+                        } else if (validLocations.length > 1) {
+                          _showLocationPicker(context, validLocations);
+                        } else {
+                          widget.onNavigateToMap?.call(validLocations.first.value);
+                        }  }
                         return false;
                       },
                       background: Container(
@@ -466,7 +464,7 @@ class _KeypadPageState extends State<KeypadPage> {
           // overflow occurs when 5*keySize > availH → cap at availH/5
           final keyFromHeight = availH / 5;
           final keySize = (keyFromWidth < keyFromHeight ? keyFromWidth : keyFromHeight)
-              .clamp(40.0, 100.0);
+              .clamp(40.0, 68.0);
 
           return Column(
             mainAxisSize: MainAxisSize.max,
@@ -608,6 +606,61 @@ class _KeypadPageState extends State<KeypadPage> {
           ),
         ),
       ),
+    );
+  }
+
+  List<MapEntry<String, LatLng>> _getValidLocations(Contact contact) {
+    final List<MapEntry<String, LatLng>> validLocations = [];
+
+    // 1. Parse websites
+    for (int i = 0; i < contact.websites.length; i++) {
+      final loc = MapUtils.parseLocationLink(contact.websites[i].url);
+      if (loc != null) {
+        String label = 'Location ${validLocations.length + 1}';
+        if (i < contact.addresses.length && contact.addresses[i].formatted?.isNotEmpty == true) {
+          label = contact.addresses[i].formatted!;
+        }
+        validLocations.add(MapEntry(label, loc));
+      }
+    }
+
+    // 2. Parse addresses
+    for (final addr in contact.addresses) {
+      final loc = MapUtils.parseLocationLink(addr.formatted ?? '');
+      if (loc != null) {
+        // Prevent exact duplicates
+        if (!validLocations.any((e) => e.value.latitude == loc.latitude && e.value.longitude == loc.longitude)) {
+          validLocations.add(MapEntry(addr.formatted ?? 'Address Location', loc));
+        }
+      }
+    }
+    return validLocations;
+  }
+
+  void _showLocationPicker(BuildContext context, List<MapEntry<String, LatLng>> validLocations) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Choose Location', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              ...validLocations.map((locEntry) => ListTile(
+                leading: const Icon(Icons.location_on, color: Colors.red),
+                title: Text(locEntry.key, maxLines: 2, overflow: TextOverflow.ellipsis),
+                onTap: () {
+                  Navigator.pop(context);
+                  widget.onNavigateToMap?.call(locEntry.value);
+                },
+              )),
+            ],
+          ),
+        );
+      },
     );
   }
 }

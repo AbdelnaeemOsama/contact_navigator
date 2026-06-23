@@ -4,92 +4,10 @@ import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+// فئة مساعدة للتعامل مع الخرائط وإحداثيات الموقع وتوجيهات السير
 class MapUtils {
   /// Parses a Google Maps or OSM link to extract the coordinates
-  /// Resolves shortened URLs if necessary
-  static Future<LatLng?> resolveAndParseLocationLink(String link) async {
-    if (link.isEmpty) return null;
-
-    // Try direct parsing first
-    LatLng? parsed = parseLocationLink(link);
-    if (parsed != null) return parsed;
-
-    // If not parsed and it's a shortened URL or likely to redirect, try to resolve it
-    if (link.contains('goo.gl') ||
-        link.contains('maps.app.goo.gl') ||
-        link.contains('bit.ly') ||
-        link.contains('t.co') ||
-        link.contains('page.link')) {
-      try {
-        String currentUrl = link;
-        int redirectCount = 0;
-        const int maxRedirects = 3;
-
-        while (redirectCount < maxRedirects) {
-          final client = http.Client();
-          final request = http.Request('GET', Uri.parse(currentUrl))
-            ..followRedirects = false;
-          final response = await client.send(request);
-
-          final String? redirectedUrl = response.headers['location'];
-          if (redirectedUrl == null) break;
-
-          currentUrl = redirectedUrl;
-          parsed = parseLocationLink(currentUrl);
-          if (parsed != null) return parsed;
-
-          redirectCount++;
-        }
-
-        // Final fallback: if still no coordinates, try to extract a place name and geocode it
-        final placeName = _extractPlaceName(currentUrl);
-        if (placeName != null) {
-          try {
-            final locations = await locationFromAddress(placeName);
-            if (locations.isNotEmpty) {
-              return LatLng(locations.first.latitude, locations.first.longitude);
-            }
-          } catch (_) {}
-        }
-      } catch (e) {
-        debugPrint('Error resolving shortened URL: $e');
-      }
-    }
-
-    return null;
-  }
-
-  static String? _extractPlaceName(String url) {
-    try {
-      final uri = Uri.parse(url);
-      // Handle /maps/place/Place+Name/
-      if (uri.path.contains('/maps/place/')) {
-        final parts = uri.path.split('/maps/place/');
-        if (parts.length > 1) {
-          return Uri.decodeComponent(
-            parts[1].split('/')[0].replaceAll('+', ' '),
-          );
-        }
-      }
-      // Handle /maps/search/Place+Name/
-      if (uri.path.contains('/maps/search/')) {
-        final parts = uri.path.split('/maps/search/');
-        if (parts.length > 1) {
-          return Uri.decodeComponent(
-            parts[1].split('/')[0].replaceAll('+', ' '),
-          );
-        }
-      }
-      // Handle ?q=Place+Name
-      final q = uri.queryParameters['q'];
-      if (q != null && !RegExp(r'^-?\d+\.\d+,-?\d+\.\d+$').hasMatch(q)) {
-        return q;
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  /// Internal synchronous parser
+  // تحليل روابط خرائط Google أو OSM لاستخراج الإحداثيات
   static LatLng? parseLocationLink(String link) {
     if (link.isEmpty) return null;
 
@@ -165,16 +83,19 @@ class MapUtils {
   }
 
   /// Generates an OpenStreetMap URL for the given coordinates
+  // توليد رابط OpenStreetMap بالاعتماد على إحداثيات معينة
   static String generateOsmLink(LatLng location) {
     return 'https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}#map=16/${location.latitude}/${location.longitude}';
   }
 
   static const double _walkingSpeedMps = 5.0 / 3.6;
 
+  // توحيد مسمى وسيلة الانتقال إلى مشي أو قيادة
   static String _normalizeProfile(String profile) {
     return profile == 'foot' || profile == 'walking' ? 'walking' : 'driving';
   }
 
+  // استدعاء خادم OSRM للحصول على مسار القيادة أو المشي بين نقطتين
   static Future<RouteInfo?> _fetchOsrmRoute(
     LatLng start,
     LatLng end,
@@ -212,6 +133,7 @@ class MapUtils {
     }
   }
 
+  // تعديل مدة المسار بناءً على سرعة المشي القياسية
   static RouteInfo _withWalkingDuration(RouteInfo info) {
     return RouteInfo(
       points: info.points,
@@ -223,6 +145,7 @@ class MapUtils {
 
   /// Fetches a route from OSRM between two points.
   /// [profile] can be 'driving' or 'walking' ('foot' is also accepted).
+  // جلب معلومات المسار الكاملة (إحداثيات ومسافة وزمن) بين نقطتين
   static Future<RouteInfo?> getRouteWithInfo(
     LatLng start,
     LatLng end, {
@@ -254,12 +177,14 @@ class MapUtils {
   }
 
   /// Legacy method for backward compatibility
+  // جلب قائمة النقاط المكونة للمسار فقط (متوافق مع الإصدارات السابقة)
   static Future<List<LatLng>> getRoute(LatLng start, LatLng end) async {
     final info = await getRouteWithInfo(start, end);
     return info?.points ?? [];
   }
 }
 
+// كلاس يمثل معلومات المسار بين نقطتين بما فيها النقاط المكونة، المدة والمسافة
 class RouteInfo {
   final List<LatLng> points;
   final double durationSeconds;
@@ -273,6 +198,7 @@ class RouteInfo {
     required this.profile,
   });
 
+  // الحصول على المدة الزمنية منسقة للعرض (بالدقائق أو الساعات والدقائق)
   String get formattedDuration {
     final totalMinutes = (durationSeconds / 60).round();
     if (totalMinutes < 60) {
@@ -284,6 +210,7 @@ class RouteInfo {
     return '$hours hr $mins min';
   }
 
+  // الحصول على المسافة منسقة للعرض (بالمتر أو الكيلومتر)
   String get formattedDistance {
     if (distanceMeters < 1000) {
       return '${distanceMeters.round()} m';

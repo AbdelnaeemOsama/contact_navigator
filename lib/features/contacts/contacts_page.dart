@@ -5,9 +5,8 @@ import 'package:contact_navigator/core/services/voice_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:contact_navigator/features/contacts/categories_page.dart';
 import 'package:contact_navigator/features/keypad/keypad_page.dart';
-import 'package:contact_navigator/features/settings/settings_page.dart';
 import 'package:contact_navigator/features/map/map_tab.dart';
-import 'package:contact_navigator/features/voice_assistant/widgets/voice_assistant_widget.dart';
+import 'package:contact_navigator/features/settings/settings_page.dart';
 import 'bloc/contacts_bloc.dart';
 import 'bloc/contacts_event.dart';
 import 'bloc/contacts_state.dart';
@@ -19,6 +18,9 @@ import 'widgets/contacts_favorites_section.dart';
 import 'package:contact_navigator/core/widgets/custom_bottom_nav.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:contact_navigator/features/voice_assistant/widgets/voice_assistant_widget.dart';
+import 'package:contact_navigator/features/voice_assistant/bloc/voice_assistant_bloc.dart';
+import 'package:contact_navigator/core/utils/map_utils.dart';
 
 
 class ContactsPage extends StatefulWidget {
@@ -36,6 +38,7 @@ class _ContactsPageState extends State<ContactsPage> {
 
   final GlobalKey<CategoriesPageState> _categoriesKey = GlobalKey<CategoriesPageState>();
 
+  // فتح صفحة البحث في جهات الاتصال
   void _openContactsSearch() {
     Navigator.push<void>(
       context,
@@ -45,6 +48,7 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
+  // معالجة حدث الضغط على جهة الاتصال لتوسيع عرض التفاصيل وقراءة الاسم صوتياً
   void _onContactTap(Contact contact) {
     final contactId = contact.id;
     setState(() {
@@ -56,6 +60,7 @@ class _ContactsPageState extends State<ContactsPage> {
     }
   }
 
+  // الانتقال إلى تبويب الخريطة والتركيز على موقع جهة الاتصال المحددة
   void _navigateToMap(LatLng latLng) {
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) {
@@ -67,6 +72,7 @@ class _ContactsPageState extends State<ContactsPage> {
     });
   }
 
+  // بناء تبويب جهات الاتصال والاستماع للتغييرات لعرض رسائل التنبيه (SnackBar)
   Widget _buildContactsTab(Color lightBlue) {
     return BlocListener<ContactsBloc, ContactsState>(
       listenWhen: (previous, current) {
@@ -127,6 +133,7 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
+  // بناء قائمة جهات الاتصال وقسم جهات الاتصال المفضلة
   Widget _buildContactsList(ContactsLoaded state, Color lightBlue) {
     final favorites = state.allContacts.where((c) => state.favoriteIds.contains(c.id)).toList();
     final contacts = state.allContacts;
@@ -175,6 +182,7 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
+  // بناء عنوان القسم (مثل "All Contacts")
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(top: 24, bottom: 16),
@@ -182,6 +190,7 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
+  // بناء الواجهة الرئيسية لصفحة جهات الاتصال بما فيها شريط التنقل السفلي والزر العائم
   @override
   Widget build(BuildContext context) {
     const lightBlue = Color(0xFF33A1E5);
@@ -196,43 +205,72 @@ class _ContactsPageState extends State<ContactsPage> {
           });
         }
       },
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: Stack(
-          children: [
-            // Main content with bottom padding so content doesn't hide behind nav
-            Positioned.fill(
-              child: SafeArea(
-                bottom: false,
-                child: _buildBody(lightBlue),
+      child: BlocListener<VoiceAssistantBloc, VoiceAssistantState>(
+        listener: (context, state) {
+          if (state is VoiceAssistantExecuting && state.intent == VoiceIntent.navigate) {
+            final contact = state.contact;
+            final validLocations = _getValidLocationsForVoice(contact);
+
+            if (validLocations.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('No location saved for ${contact.displayName}'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            } else if (validLocations.length > 1) {
+              _showVoiceLocationPicker(context, contact, validLocations);
+            } else {
+              _navigateToMap(validLocations.first.value);
+            }
+          }
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          body: Stack(
+            children: [
+              // Main content with bottom padding so content doesn't hide behind nav
+              Positioned.fill(
+                child: SafeArea(
+                  bottom: false,
+                  child: _buildBody(lightBlue),
+                ),
               ),
-            ),
-            // Floating bottom nav overlay
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: CustomBottomNav(
-                selectedIndex: _selectedIndex,
-                onItemSelected: (index) => setState(() {
-                  _selectedIndex = index;
-                  if (index == 2) _mapVisited = true;
-                }),
-              ),
-            ),
-            // FAB overlay
-            if (_buildFab(lightBlue) != null)
+              // Floating bottom nav overlay
               Positioned(
-                right: 16,
-                bottom: 120,
-                child: _buildFab(lightBlue)!,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: CustomBottomNav(
+                  selectedIndex: _selectedIndex,
+                  onItemSelected: (index) => setState(() {
+                    _selectedIndex = index;
+                    if (index == 2) _mapVisited = true;
+                  }),
+                ),
               ),
-          ],
+              // FAB overlay
+              if (_buildFab(lightBlue) != null)
+                Positioned(
+                  right: 16,
+                  bottom: 120,
+                  child: _buildFab(lightBlue)!,
+                ),
+              // Voice Assistant FAB overlay
+              if (_selectedIndex == 0 || _selectedIndex == 2 || _selectedIndex == 3)
+                const Positioned(
+                  left: 16,
+                  bottom: 120,
+                  child: VoiceAssistantFab(),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  // بناء الزر العائم (FAB) المخصص لإضافة جهة اتصال أو مجموعة جديدة حسب التبويب النشط
   Widget? _buildFab(Color lightBlue) {
     // No FAB at all on keypad tab
     if (_selectedIndex == 1) return null;
@@ -274,6 +312,7 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
+  // بناء المحتوى الرئيسي بناءً على التبويب المختار
   Widget _buildBody(Color lightBlue) {
     return IndexedStack(
       index: _selectedIndex,
@@ -292,6 +331,7 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
+  // بناء واجهة حالة الخطأ مع زر إعادة المحاولة
   Widget _buildErrorState(String message, Color lightBlue) {
     return Center(
       child: Padding(
@@ -313,6 +353,7 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
+  // بناء واجهة عدم توفر صلاحية الوصول لجهات الاتصال مع زر لفتح الإعدادات
   Widget _buildPermissionDeniedState(Color lightBlue) {
     return Center(
       child: Padding(
@@ -366,9 +407,63 @@ class _ContactsPageState extends State<ContactsPage> {
     );
   }
 
+  // الحصول على لون عشوائي متناسق لأيقونة جهة الاتصال بناءً على الاسم الأول
   Color _getContactColor(String name) {
     final hash = name.isNotEmpty ? name.codeUnitAt(0) : 0;
     return AppColors.contactAvatarColors[hash % AppColors.contactAvatarColors.length];
   }
 
+  List<MapEntry<String, LatLng>> _getValidLocationsForVoice(Contact contact) {
+    final List<MapEntry<String, LatLng>> validLocations = [];
+
+    // 1. Parse websites
+    for (int i = 0; i < contact.websites.length; i++) {
+      final loc = MapUtils.parseLocationLink(contact.websites[i].url);
+      if (loc != null) {
+        String label = 'Location ${validLocations.length + 1}';
+        if (i < contact.addresses.length && contact.addresses[i].formatted?.isNotEmpty == true) {
+          label = contact.addresses[i].formatted!;
+        }
+        validLocations.add(MapEntry(label, loc));
+      }
+    }
+
+    // 2. Parse addresses
+    for (final addr in contact.addresses) {
+      final text = addr.formatted ?? '';
+      if (text.isEmpty) continue;
+      final loc = MapUtils.parseLocationLink(text);
+      if (loc != null) {
+        if (!validLocations.any((e) => e.value.latitude == loc.latitude && e.value.longitude == loc.longitude)) {
+          validLocations.add(MapEntry(text, loc));
+        }
+      }
+    }
+    return validLocations;
+  }
+
+  void _showVoiceLocationPicker(BuildContext context, Contact contact, List<MapEntry<String, LatLng>> locations) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Choose Location for ${contact.displayName}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            ...locations.map((locEntry) => ListTile(
+              leading: const Icon(Icons.location_on, color: Colors.red),
+              title: Text(locEntry.key, maxLines: 2, overflow: TextOverflow.ellipsis),
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToMap(locEntry.value);
+              },
+            )),
+          ],
+        ),
+      ),
+    );
+  }
 }

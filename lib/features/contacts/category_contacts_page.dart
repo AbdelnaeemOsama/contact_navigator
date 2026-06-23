@@ -10,6 +10,7 @@ import 'package:contact_navigator/features/contacts/bloc/group_contacts_event.da
 import 'package:contact_navigator/features/contacts/bloc/group_contacts_state.dart';
 import 'package:contact_navigator/features/contacts/widgets/contact_list_item.dart';
 
+// صفحة استعراض جهات الاتصال المنتمية لفئة أو تصنيف محدد
 class CategoryContactsPage extends StatefulWidget {
   final String categoryTitle;
   final String groupId;
@@ -24,20 +25,24 @@ class CategoryContactsPage extends StatefulWidget {
   State<CategoryContactsPage> createState() => _CategoryContactsPageState();
 }
 
+// حالة صفحة جهات الاتصال الخاصة بالتصنيف لإدارة حالة التوسيع والفلترة
 class _CategoryContactsPageState extends State<CategoryContactsPage> {
   int? _expandedIndex;
 
+  // تهيئة الحالة وإرسال حدث لجلب جهات اتصال المجموعة المحددة
   @override
   void initState() {
     super.initState();
     context.read<GroupContactsBloc>().add(LoadGroupContactsEvent(widget.groupId));
   }
 
+  // تصفية جهات الاتصال الخاصة بالمجموعة بناءً على نص البحث
   void _filterContacts(String query) {
     setState(() => _expandedIndex = null);
     context.read<GroupContactsBloc>().add(SearchGroupContactsEvent(query));
   }
 
+  // فتح صفحة اختيار جهات الاتصال لإضافتها لهذه المجموعة واستقبال النتيجة
   Future<void> _navigatorPushToSelectContacts(BuildContext context) async {
     final result = await Navigator.push(
       context,
@@ -64,11 +69,13 @@ class _CategoryContactsPageState extends State<CategoryContactsPage> {
     }
   }
 
+  // الحصول على لون عشوائي متناسق لأيقونة جهة الاتصال
   Color _getContactColor(String name) {
     final hash = name.isNotEmpty ? name.codeUnitAt(0) : 0;
     return AppColors.contactAvatarColors[hash % AppColors.contactAvatarColors.length];
   }
 
+  // بناء واجهة صفحة جهات اتصال التصنيف
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -134,6 +141,7 @@ class _CategoryContactsPageState extends State<CategoryContactsPage> {
     );
   }
 
+  // بناء قائمة جهات الاتصال المفصلة الخاصة بالمجموعة
   Widget _buildContactList(GroupContactsLoaded state) {
     final contactsState = context.read<ContactsBloc>().state;
     final nameFormat = contactsState is ContactsLoaded ? contactsState.nameFormat : ContactNameFormat.firstLast;
