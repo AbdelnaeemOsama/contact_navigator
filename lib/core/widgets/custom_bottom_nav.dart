@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+// شريط التنقل السفلي المخصص للتنقل بين الأقسام الرئيسية للتطبيق بتصميم عصري
 class CustomBottomNav extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onItemSelected;
@@ -10,6 +11,7 @@ class CustomBottomNav extends StatelessWidget {
     required this.onItemSelected,
   });
 
+  // بناء واجهة شريط التنقل مع مراعاة أحجام الأجهزة اللوحية
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -47,6 +49,7 @@ class CustomBottomNav extends StatelessWidget {
     );
   }
 
+  // بناء عنصر تنقل فردي داخل شريط التنقل بتأثيرات حركة عند الاختيار
   Widget _buildNavItem(BuildContext context, int index, IconData icon, String label) {
     final isSelected = selectedIndex == index;
     const activeColor = Color(0xFF33A1E5);

@@ -10,6 +10,7 @@ import 'bloc/categories_bloc.dart';
 import 'bloc/categories_event.dart';
 import 'bloc/categories_state.dart';
 
+// صفحة استعراض مجموعات وتصنيفات جهات الاتصال وإدارتها
 class CategoriesPage extends StatefulWidget {
   final bool isTab;
   const CategoriesPage({super.key, this.isTab = true});
@@ -18,19 +19,23 @@ class CategoriesPage extends StatefulWidget {
   State<CategoriesPage> createState() => CategoriesPageState();
 }
 
+// حالة صفحة المجموعات، للتحكم بالبحث وعرض النوافذ المنبثقة للإضافة والتعديل
 class CategoriesPageState extends State<CategoriesPage> {
   final TextEditingController _searchController = TextEditingController();
 
+  // تهيئة الحالة وإرسال حدث لجلب المجموعات من CategoriesBloc
   @override
   void initState() {
     super.initState();
     context.read<CategoriesBloc>().add(LoadCategoriesEvent());
   }
 
+  // تصفية وقصر المجموعات المعروضة بناءً على نص البحث
   void _filterCategories(String query) {
     context.read<CategoriesBloc>().add(SearchCategoriesEvent(query));
   }
 
+  // عرض نافذة حوار منبثقة لإضافة فئة/تصنيف جديد
   void showAddCategoryDialog(BuildContext context) {
     final TextEditingController controller = TextEditingController();
     showDialog(
@@ -85,6 +90,7 @@ class CategoriesPageState extends State<CategoriesPage> {
     );
   }
 
+  // عرض نافذة حوار منبثقة لتعديل اسم مجموعة/فئة محددة
   void showEditCategoryDialog(BuildContext context, Category group) {
     final TextEditingController controller = TextEditingController(text: group.name);
     showDialog(
@@ -141,12 +147,14 @@ class CategoriesPageState extends State<CategoriesPage> {
     );
   }
 
+  // تنظيف موارد حقل البحث
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
+  // بناء واجهة تبويب أو صفحة التصنيفات الرئيسية
   @override
   Widget build(BuildContext context) {
     const lightBlue = Color(0xFF33A1E5);
@@ -338,6 +346,7 @@ class CategoriesPageState extends State<CategoriesPage> {
     );
   }
 
+  // بناء كارت تصنيف فردي يحتوي على خيارات الحذف والتعديل والانتقال لجهات اتصال هذا التصنيف
   Widget _buildCategoryTile(BuildContext context, Category group) {
     final contactCount = group.contactCount;
     final subtitle = '$contactCount contact${contactCount == 1 ? '' : 's'}';

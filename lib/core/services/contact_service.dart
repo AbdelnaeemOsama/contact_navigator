@@ -3,14 +3,20 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:mobile_number/mobile_number.dart';
 import 'package:flutter/foundation.dart';
 
+// واجهة خدمة إدارة جهات الاتصال لتحديد العمليات المدعومة
 abstract class IContactService {
+  // طلب صلاحيات قراءة وكتابة جهات الاتصال من النظام
   Future<bool> requestPermission();
+
+  // جلب قائمة جهات الاتصال مع إمكانية الفلترة أو التصفية حسب المجموعة
   Future<List<Contact>> getContacts({
     bool withProperties = true,
     bool withPhoto = true,
     String? query,
     String? groupId,
   });
+
+  // إنشاء جهة اتصال جديدة وحفظها في النظام مع إمكانية ربطها بمجموعة
   Future<String> createContact({
     required String firstName,
     required String lastName,
@@ -22,18 +28,38 @@ abstract class IContactService {
     Uint8List? photo,
     String? groupId,
   });
+
+  // تحديث بيانات جهة اتصال موجودة
   Future<void> updateContact(Contact contact);
+
+  // حذف جهة اتصال نهائياً باستخدام معرفها الفريد
   Future<void> deleteContact(String id);
+
+  // إضافة قائمة من جهات الاتصال إلى مجموعة معينة
   Future<void> addToGroup(List<String> contactIds, String groupId);
+
+  // تصدير بيانات جهة الاتصال إلى صيغة ملف VCard نصي
   Future<String> exportToVCard(Contact contact);
+
+  // فتح جهة الاتصال في تطبيق جهات الاتصال الافتراضي للنظام
   Future<void> showNativeContact(String id);
+
+  // فتح رابط موقع جغرافي في متصفح خارجي أو تطبيق خرائط
   Future<void> launchLocation(String url);
+
+  // جلب الملف الشخصي الخاص بالمستخدم الحالي (الملف المسمى "أنا")
   Future<Contact?> getProfile();
+
+  // تحديث بيانات الملف الشخصي الخاص بالمستخدم
   Future<void> updateProfile(Contact contact);
+
+  // الحصول على رقم الهاتف الخاص ببطاقة SIM للمستخدم
   Future<String?> getSimNumber();
 }
 
+// تنفيذ واجهة خدمة إدارة جهات الاتصال بالاعتماد على حزمة flutter_contacts
 class ContactService implements IContactService {
+  // طلب صلاحيات الوصول لجهات الاتصال من نظام التشغيل
   @override
   Future<bool> requestPermission() async {
     final status = await FlutterContacts.permissions.request(
@@ -43,6 +69,7 @@ class ContactService implements IContactService {
         status == PermissionStatus.limited;
   }
 
+  // جلب جهات الاتصال وتفاصيلها وصورها مع خيارات التصفية والبحث
   @override
   Future<List<Contact>> getContacts({
     bool withProperties = true,
@@ -67,6 +94,7 @@ class ContactService implements IContactService {
     );
   }
 
+  // إنشاء جهة اتصال جديدة وحفظها في النظام مع إضافة إمكانية المحاولة المتكررة لإدراجها بمجموعة
   @override
   Future<String> createContact({
     required String firstName,
@@ -115,6 +143,7 @@ class ContactService implements IContactService {
     return createdId;
   }
 
+  // تحديث بيانات جهة الاتصال بالنظام مع دمج التغييرات مع البيانات المخزنة محلياً لتفادي فقدان المعرفات الفريدة
   @override
   Future<void> updateContact(Contact contact) async {
     // Re-fetch the full contact with all system-level identifiers
@@ -142,11 +171,13 @@ class ContactService implements IContactService {
     }
   }
 
+  // حذف جهة الاتصال من الجهاز
   @override
   Future<void> deleteContact(String id) async {
     await FlutterContacts.delete(id);
   }
 
+  // ربط مجموعة من المعرفات الفريدة لجهات الاتصال بمجموعة/تصنيف معين
   @override
   Future<void> addToGroup(List<String> contactIds, String groupId) async {
     await FlutterContacts.groups.addContacts(
@@ -155,16 +186,19 @@ class ContactService implements IContactService {
     );
   }
 
+  // تصدير جهة الاتصال بصيغة vCard النصية
   @override
   Future<String> exportToVCard(Contact contact) async {
     return FlutterContacts.vCard.export(contact);
   }
 
+  // استعراض جهة الاتصال داخل تطبيق العرض الافتراضي للنظام
   @override
   Future<void> showNativeContact(String id) async {
     await FlutterContacts.native.showViewer(id);
   }
 
+  // فتح رابط موقع جغرافي باستخدام التطبيق الخارجي المناسب
   @override
   Future<void> launchLocation(String url) async {
     if (url.isEmpty) return;
@@ -176,11 +210,13 @@ class ContactService implements IContactService {
     }
   }
 
+  // جلب الملف الشخصي الخاص بالمستخدم الأساسي للجهاز
   @override
   Future<Contact?> getProfile() async {
     return await FlutterContacts.profile.get(properties: ContactProperties.all);
   }
 
+  // تحديث الملف الشخصي الخاص بالمستخدم
   @override
   Future<void> updateProfile(Contact contact) async {
     // Note: Profile update support varies by device and platform permissions
@@ -188,6 +224,7 @@ class ContactService implements IContactService {
     await FlutterContacts.update(contact);
   }
 
+  // قراءة رقم الهاتف للشريحة المثبتة بالجهاز عبر مكتبة mobile_number
   @override
   Future<String?> getSimNumber() async {
     try {

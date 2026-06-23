@@ -4,9 +4,11 @@ import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+// فئة مساعدة للتعامل مع الخرائط وإحداثيات الموقع وتوجيهات السير
 class MapUtils {
   /// Parses a Google Maps or OSM link to extract the coordinates
   /// Resolves shortened URLs if necessary
+  // تحليل روابط خرائط Google أو OSM لاستخراج الإحداثيات وحل الروابط المختصرة
   static Future<LatLng?> resolveAndParseLocationLink(String link) async {
     if (link.isEmpty) return null;
 
@@ -59,6 +61,7 @@ class MapUtils {
     return null;
   }
 
+  // استخراج اسم المكان من الرابط إذا تعذر العثور على إحداثيات مباشرة
   static String? _extractPlaceName(String url) {
     try {
       final uri = Uri.parse(url);
@@ -90,6 +93,7 @@ class MapUtils {
   }
 
   /// Internal synchronous parser
+  // التحليل المتزامن للرابط لاستخراج إحداثيات خطوط الطول والعرض لـ Google Maps و OpenStreetMap
   static LatLng? parseLocationLink(String link) {
     if (link.isEmpty) return null;
 
@@ -165,16 +169,19 @@ class MapUtils {
   }
 
   /// Generates an OpenStreetMap URL for the given coordinates
+  // توليد رابط OpenStreetMap بالاعتماد على إحداثيات معينة
   static String generateOsmLink(LatLng location) {
     return 'https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}#map=16/${location.latitude}/${location.longitude}';
   }
 
   static const double _walkingSpeedMps = 5.0 / 3.6;
 
+  // توحيد مسمى وسيلة الانتقال إلى مشي أو قيادة
   static String _normalizeProfile(String profile) {
     return profile == 'foot' || profile == 'walking' ? 'walking' : 'driving';
   }
 
+  // استدعاء خادم OSRM للحصول على مسار القيادة أو المشي بين نقطتين
   static Future<RouteInfo?> _fetchOsrmRoute(
     LatLng start,
     LatLng end,
@@ -212,6 +219,7 @@ class MapUtils {
     }
   }
 
+  // تعديل مدة المسار بناءً على سرعة المشي القياسية
   static RouteInfo _withWalkingDuration(RouteInfo info) {
     return RouteInfo(
       points: info.points,
@@ -223,6 +231,7 @@ class MapUtils {
 
   /// Fetches a route from OSRM between two points.
   /// [profile] can be 'driving' or 'walking' ('foot' is also accepted).
+  // جلب معلومات المسار الكاملة (إحداثيات ومسافة وزمن) بين نقطتين
   static Future<RouteInfo?> getRouteWithInfo(
     LatLng start,
     LatLng end, {
@@ -254,12 +263,14 @@ class MapUtils {
   }
 
   /// Legacy method for backward compatibility
+  // جلب قائمة النقاط المكونة للمسار فقط (متوافق مع الإصدارات السابقة)
   static Future<List<LatLng>> getRoute(LatLng start, LatLng end) async {
     final info = await getRouteWithInfo(start, end);
     return info?.points ?? [];
   }
 }
 
+// كلاس يمثل معلومات المسار بين نقطتين بما فيها النقاط المكونة، المدة والمسافة
 class RouteInfo {
   final List<LatLng> points;
   final double durationSeconds;
@@ -273,6 +284,7 @@ class RouteInfo {
     required this.profile,
   });
 
+  // الحصول على المدة الزمنية منسقة للعرض (بالدقائق أو الساعات والدقائق)
   String get formattedDuration {
     final totalMinutes = (durationSeconds / 60).round();
     if (totalMinutes < 60) {
@@ -284,6 +296,7 @@ class RouteInfo {
     return '$hours hr $mins min';
   }
 
+  // الحصول على المسافة منسقة للعرض (بالمتر أو الكيلومتر)
   String get formattedDistance {
     if (distanceMeters < 1000) {
       return '${distanceMeters.round()} m';

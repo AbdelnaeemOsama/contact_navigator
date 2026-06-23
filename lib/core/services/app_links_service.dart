@@ -6,6 +6,7 @@ import 'package:contact_navigator/features/contacts/bloc/contacts_state.dart';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// خدمة التعامل مع الروابط العميقة (Deep Links / App Links) للتطبيق لتشغيل الأوامر الخارجية
 class AppLinksService {
   final AppLinks _appLinks;
   final ContactsBloc _contactsBloc;
@@ -13,6 +14,7 @@ class AppLinksService {
 
   AppLinksService(this._contactsBloc) : _appLinks = AppLinks();
 
+  // تهيئة الاستماع للروابط العميقة الواردة والروابط التي تم تشغيل التطبيق من خلالها
   void init() {
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
       _handleDeepLink(uri);
@@ -21,6 +23,7 @@ class AppLinksService {
     _handleInitialUri();
   }
 
+  // معالجة الرابط الذي بدأ تشغيل التطبيق به إن وُجد
   Future<void> _handleInitialUri() async {
     try {
       final initialUri = await _appLinks.getInitialLink();
@@ -32,6 +35,7 @@ class AppLinksService {
     }
   }
 
+  // تحليل ومعالجة الرابط العميق الوارد وتوجيهه للإجراء المناسب (مثل الاتصال أو الملاحة)
   void _handleDeepLink(Uri uri) async {
     debugPrint('Received Deep Link: $uri');
     if (uri.scheme == 'contactnavigator') {
@@ -49,6 +53,7 @@ class AppLinksService {
     }
   }
 
+  // معالجة أمر الاتصال الهاتفي لجهة اتصال محددة بالاسم من الرابط
   void _handleCallCommand(String name) async {
     final state = _contactsBloc.state;
     if (state is ContactsLoaded) {
@@ -67,6 +72,7 @@ class AppLinksService {
     }
   }
 
+  // معالجة أمر الانتقال والملاحة الجغرافية لوجهة معينة بالاسم أو الرابط من الرابط العميق
   void _handleNavigateCommand(String destination) async {
     // Attempt to parse location link if exists, otherwise open GMaps with query
     final state = _contactsBloc.state;
@@ -98,6 +104,7 @@ class AppLinksService {
     } catch (_) {}
   }
 
+  // إلغاء الاشتراك في تدفق الروابط عند التخلص من الخدمة لمنع تسريب الذاكرة
   void dispose() {
     _linkSubscription?.cancel();
   }

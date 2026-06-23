@@ -39,6 +39,7 @@ class ContactListItem extends StatelessWidget {
     this.onNavigateToMap,
   });
 
+  // بناء واجهة عنصر جهة الاتصال في القائمة وعرض بياناته الأساسية
   @override
   Widget build(BuildContext context) {
     final String name = _getFormattedName(contact, nameFormat);
@@ -236,6 +237,7 @@ class ContactListItem extends StatelessWidget {
     );
   }
 
+  // بناء الخلفية التي تظهر عند سحب العنصر لليمين أو اليسار (مثل أيقونة الاتصال أو الخريطة)
   Widget _buildDismissBackground({required Alignment alignment, required IconData icon}) {
     return Container(
       alignment: alignment,
@@ -252,6 +254,7 @@ class ContactListItem extends StatelessWidget {
     );
   }
 
+  // بناء زر الإجراء السريع (مثل الاتصال، التعديل، الحذف، الخرائط) مع تأثير الضغط المائي
   Widget _buildActionIcon(String path, {IconData? icon, VoidCallback? onTap}) {
     return InkWell(
       onTap: onTap,
@@ -270,6 +273,7 @@ class ContactListItem extends StatelessWidget {
     );
   }
 
+  // عرض نافذة تأكيد لحذف جهة الاتصال نهائياً
   void _showDeleteDialog(BuildContext context) {
     final displayName = contact.displayName ?? 'this contact';
     showDialog(
@@ -297,6 +301,7 @@ class ContactListItem extends StatelessWidget {
     );
   }
 
+  // إجراء مكالمة هاتفية مباشرة لجهة الاتصال باستخدام المكون الخارجي
   Future<void> _makeCall(BuildContext context, String phone) async {
     if (phone.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -316,6 +321,7 @@ class ContactListItem extends StatelessWidget {
     }
   }
      // to show multiple phone numbers 
+  // عرض قائمة لاختيار رقم الهاتف إذا كانت جهة الاتصال تملك أكثر من رقم
   void _showPhonePicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -341,18 +347,12 @@ class ContactListItem extends StatelessWidget {
       ),
     );
   }
-<<<<<<< HEAD
-  // to show locations of contact 
-  void _showLocationPicker(BuildContext context) {
-=======
-
+  // عرض قائمة لاختيار الموقع الجغرافي لجهة الاتصال إذا كان هناك أكثر من عنوان أو رابط موقع
   void _showLocationPicker(BuildContext context, List<MapEntry<String, LatLng>> validLocations) {
->>>>>>> 9079bdd5f02c9c139e917f2c957753bcf5a44ec5
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
-<<<<<<< HEAD
         final List<Widget> items = [];
         for (int i = 0; i < contact.websites.length; i++) {
           final website = contact.websites[i];
@@ -373,8 +373,7 @@ class ContactListItem extends StatelessWidget {
           }
         }
        //  display locations 
-=======
->>>>>>> 9079bdd5f02c9c139e917f2c957753bcf5a44ec5
+
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
@@ -397,6 +396,7 @@ class ContactListItem extends StatelessWidget {
     );
   }
   // to show remove from group dialog 
+  // عرض نافذة تأكيد لإزالة جهة الاتصال من المجموعة أو التصنيف الحالي
   void _showRemoveFromGroupDialog(BuildContext context) {
     final displayName = contact.displayName ?? 'this contact';
     showDialog(
@@ -420,10 +420,9 @@ class ContactListItem extends StatelessWidget {
       ),
     );
   }
-<<<<<<< HEAD
    //  to get formatted name 
-=======
 
+  // استخراج العناوين والمواقع الجغرافية الصالحة من جهة الاتصال لتجنب التكرار
   List<MapEntry<String, LatLng>> _getValidLocations() {
     final List<MapEntry<String, LatLng>> validLocations = [];
     
@@ -452,7 +451,7 @@ class ContactListItem extends StatelessWidget {
     return validLocations;
   }
 
->>>>>>> 9079bdd5f02c9c139e917f2c957753bcf5a44ec5
+  // تنسيق اسم جهة الاتصال بناءً على الصيغة المحددة (الاسم الأول ثم الأخير أو العكس)
   String _getFormattedName(Contact contact, ContactNameFormat format) {
     final first = contact.name?.first ?? '';
     final last = contact.name?.last ?? '';
@@ -476,6 +475,7 @@ class _FavoriteButton extends StatelessWidget {
     required this.isFavorite,
   });
 
+  // بناء واجهة زر المفضلة وتغيير حالته
   @override
   Widget build(BuildContext context) {
     return IconButton(

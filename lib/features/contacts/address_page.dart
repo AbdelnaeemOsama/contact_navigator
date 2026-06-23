@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 
+// صفحة اختيار وتعديل عنوان وموقع جهة الاتصال على الخريطة
 class AddressPage extends StatefulWidget {
   final String? initialAddress;
   final String? initialLink;
@@ -17,6 +18,7 @@ class AddressPage extends StatefulWidget {
   State<AddressPage> createState() => _AddressPageState();
 }
 
+// حالة صفحة العنوان، للتحكم في الخريطة، تحويل العناوين إلى إحداثيات، والعكس
 class _AddressPageState extends State<AddressPage> {
   late String selectedType;
   late final TextEditingController _addressController;
@@ -27,6 +29,7 @@ class _AddressPageState extends State<AddressPage> {
   bool _isLocating = false;
   bool _isGeocoding = false;
 
+  // تهيئة حالة الصفحة وربط المستمعين وقراءة الإحداثيات من الروابط الواردة
   @override
   void initState() {
     super.initState();
@@ -50,6 +53,7 @@ class _AddressPageState extends State<AddressPage> {
     _linkController.addListener(_onLinkChanged);
   }
 
+  // الاستجابة للتغير في حقل الرابط ومحاولة جلب الإحداثيات تلقائياً
   void _onLinkChanged() {
     final text = _linkController.text.trim();
     if (text.isEmpty) return;
@@ -62,6 +66,7 @@ class _AddressPageState extends State<AddressPage> {
     }
   }
 
+  // تنظيف الذاكرة وإزالة مستمعي الأحداث عند إغلاق الشاشة
   @override
   void dispose() {
     _linkController.removeListener(_onLinkChanged);
@@ -70,6 +75,7 @@ class _AddressPageState extends State<AddressPage> {
     super.dispose();
   }
 
+  // حفظ البيانات والرجوع للشاشة السابقة مع تفاصيل العنوان والموقع المختار
   void _saveAndReturn() {
     // When saving, generate the OSM link from the selected location
     String link = _linkController.text.trim();
@@ -85,6 +91,7 @@ class _AddressPageState extends State<AddressPage> {
   }
 
   /// Move the map to a location and drop a pin
+  // نقل مركز الخريطة إلى إحداثيات محددة ووضع علامة دبوسية
   void _moveToLocation(LatLng location, {bool updateLink = true}) {
     setState(() {
       _selectedLocation = location;
@@ -96,6 +103,7 @@ class _AddressPageState extends State<AddressPage> {
   }
 
   /// Reverse geocode: coordinates -> human-readable address
+  // تحويل الإحداثيات الجغرافية الجغرافية إلى نص عنوان مقروء
   Future<void> _reverseGeocode(LatLng location) async {
     setState(() => _isGeocoding = true);
     try {
@@ -122,6 +130,7 @@ class _AddressPageState extends State<AddressPage> {
   }
 
   /// Forward geocode: address text -> coordinates
+  // البحث عن عنوان نصي وتحويله إلى إحداثيات جغرافية للانتقال إليها
   Future<void> _searchAddress(String query) async {
     if (query.trim().isEmpty) return;
     setState(() => _isGeocoding = true);
@@ -149,6 +158,7 @@ class _AddressPageState extends State<AddressPage> {
   }
 
   /// Use GPS to get current location
+  // الحصول على الموقع الحالي للمستخدم بالاعتماد على الـ GPS وصلاحيات الموقع
   Future<void> _getCurrentLocation() async {
     setState(() => _isLocating = true);
     try {
@@ -202,6 +212,7 @@ class _AddressPageState extends State<AddressPage> {
   }
 
   /// Parse a pasted link and jump the map to it
+  // تحليل الرابط الملصق والانتقال إليه على الخريطة مباشرة
   void _parseAndJumpToLink() {
     final link = _linkController.text.trim();
     if (link.isEmpty) {
@@ -222,6 +233,7 @@ class _AddressPageState extends State<AddressPage> {
     }
   }
 
+  // بناء واجهة شاشة إعداد وتعديل العنوان
   @override
   Widget build(BuildContext context) {
     final defaultCenter = _selectedLocation ?? const LatLng(30.0444, 31.2357);
@@ -534,6 +546,7 @@ class _AddressPageState extends State<AddressPage> {
     );
   }
 
+  // بناء تبويب اختيار نوع العنوان (منزل، عمل، غير ذلك) مع تغيير التنسيقات عند الاختيار
   Widget _buildTabItem(String title) {
     bool isSelected = selectedType == title;
     return Expanded(

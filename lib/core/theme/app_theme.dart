@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+// الألوان المعرفة والثابتة المستخدمة في كامل أرجاء التطبيق
 class AppColors {
   AppColors._();
 
@@ -20,12 +21,14 @@ class AppColors {
   ];
 }
 
+// الخطوط المستخدمة في التطبيق
 class AppFonts {
   AppFonts._();
 
   static const primary = 'Roboto';
 }
 
+// التنسيقات والأنماط النصية الموحدة في التطبيق
 class AppTextStyles {
   AppTextStyles._();
 
