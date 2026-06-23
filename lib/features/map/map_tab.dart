@@ -82,7 +82,7 @@ class _MapTabState extends State<MapTab> {
 
     if (permission == LocationPermission.deniedForever) {
       setState(
-        () => _locationMessage = 'Location permissions are permanently denied.',
+        () => _locationMessage = 'Location permissions are permanently denied. Please enable them in settings.',
       );
       return;
     }
@@ -622,7 +622,7 @@ class _MapTabState extends State<MapTab> {
                   ),
                 FloatingActionButton(
                   heroTag: 'current_location',
-                  onPressed: _getCurrentLocation,
+                  onPressed: _checkLocationPermission,
                   backgroundColor: Colors.white,
                   child: const Icon(
                     Icons.my_location,

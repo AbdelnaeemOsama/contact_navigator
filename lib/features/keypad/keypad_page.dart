@@ -367,19 +367,17 @@ class _KeypadPageState extends State<KeypadPage> {
                         if (direction == DismissDirection.startToEnd) {
                           await _makeCall(item.phone.number);
                         } else if (direction == DismissDirection.endToStart) {
-                          final link = item.contact.websites.isNotEmpty ? item.contact.websites.first.url : '';
-                          var latLng = MapUtils.parseLocationLink(link);
-                          if (latLng == null && item.contact.addresses.isNotEmpty) {
-                            latLng = MapUtils.parseLocationLink(item.contact.addresses.first.formatted ?? '');
-                          }
-                          if (latLng != null) {
-                            widget.onNavigateToMap?.call(latLng);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('No location saved for this contact')),
-                            );
-                          }
-                        }
+                          final validLocations = _getValidLocations(item.contact);
+
+                        if (validLocations.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('No location saved for this contact')),
+                          );
+                        } else if (validLocations.length > 1) {
+                          _showLocationPicker(context, validLocations);
+                        } else {
+                          widget.onNavigateToMap?.call(validLocations.first.value);
+                        }  }
                         return false;
                       },
                       background: Container(
