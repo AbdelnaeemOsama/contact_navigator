@@ -197,18 +197,37 @@ class _ContactsPageState extends State<ContactsPage> {
         }
       },
       child: Scaffold(
-        extendBody: true,
         backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: _buildBody(lightBlue),
-        ),
-        floatingActionButton: _buildFab(lightBlue),
-        bottomNavigationBar: CustomBottomNav(
-          selectedIndex: _selectedIndex,
-          onItemSelected: (index) => setState(() {
-            _selectedIndex = index;
-            if (index == 2) _mapVisited = true;
-          }),
+        body: Stack(
+          children: [
+            // Main content with bottom padding so content doesn't hide behind nav
+            Positioned.fill(
+              child: SafeArea(
+                bottom: false,
+                child: _buildBody(lightBlue),
+              ),
+            ),
+            // Floating bottom nav overlay
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: CustomBottomNav(
+                selectedIndex: _selectedIndex,
+                onItemSelected: (index) => setState(() {
+                  _selectedIndex = index;
+                  if (index == 2) _mapVisited = true;
+                }),
+              ),
+            ),
+            // FAB overlay
+            if (_buildFab(lightBlue) != null)
+              Positioned(
+                right: 16,
+                bottom: 120,
+                child: _buildFab(lightBlue)!,
+              ),
+          ],
         ),
       ),
     );
@@ -241,8 +260,8 @@ class _ContactsPageState extends State<ContactsPage> {
       ));
     }
 
-    // Voice FAB only on the main contacts tab
-    if (_selectedIndex == 0) {
+    // Don't show voice FAB on keypad tab (index 1)
+    if (_selectedIndex != 1) {
       fabs.add(const VoiceAssistantFab());
     }
 
