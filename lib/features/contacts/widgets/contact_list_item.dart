@@ -52,17 +52,15 @@ class ContactListItem extends StatelessWidget {
         if (direction == DismissDirection.startToEnd) {
           await _makeCall(context, phone);
         } else if (direction == DismissDirection.endToStart) {
-          final link = contact.websites.isNotEmpty ? contact.websites.first.url : '';
-          var latLng = MapUtils.parseLocationLink(link);
-          if (latLng == null && contact.addresses.isNotEmpty) {
-            latLng = MapUtils.parseLocationLink(contact.addresses.first.formatted ?? '');
-          }
-          if (latLng != null) {
-            onNavigateToMap?.call(latLng);
-          } else {
+          final validLocations = _getValidLocations();
+          if (validLocations.isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('No location saved for this contact')),
             );
+          } else if (validLocations.length > 1) {
+            _showLocationPicker(context, validLocations);
+          } else {
+            onNavigateToMap?.call(validLocations.first.value);
           }
         }
         return false;
@@ -214,26 +212,16 @@ class ContactListItem extends StatelessWidget {
                       '',
                       icon: Icons.map_rounded,
                       onTap: () {
-                        final validLocations = contact.websites
-                            .map((w) => MapUtils.parseLocationLink(w.url))
-                            .where((loc) => loc != null)
-                            .toList();
-
-                        if (validLocations.isEmpty) {
-                          for (final addr in contact.addresses) {
-                            final loc = MapUtils.parseLocationLink(addr.formatted ?? '');
-                            if (loc != null) validLocations.add(loc);
-                          }
-                        }
+                        final validLocations = _getValidLocations();
 
                         if (validLocations.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('No location saved for this contact')),
                           );
                         } else if (validLocations.length > 1) {
-                          _showLocationPicker(context);
+                          _showLocationPicker(context, validLocations);
                         } else {
-                          onNavigateToMap?.call(validLocations.first!);
+                          onNavigateToMap?.call(validLocations.first.value);
                         }
                       },
                     ),
@@ -353,12 +341,18 @@ class ContactListItem extends StatelessWidget {
       ),
     );
   }
+<<<<<<< HEAD
   // to show locations of contact 
   void _showLocationPicker(BuildContext context) {
+=======
+
+  void _showLocationPicker(BuildContext context, List<MapEntry<String, LatLng>> validLocations) {
+>>>>>>> 9079bdd5f02c9c139e917f2c957753bcf5a44ec5
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
+<<<<<<< HEAD
         final List<Widget> items = [];
         for (int i = 0; i < contact.websites.length; i++) {
           final website = contact.websites[i];
@@ -379,6 +373,8 @@ class ContactListItem extends StatelessWidget {
           }
         }
        //  display locations 
+=======
+>>>>>>> 9079bdd5f02c9c139e917f2c957753bcf5a44ec5
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
@@ -386,7 +382,14 @@ class ContactListItem extends StatelessWidget {
             children: [
               const Text('Choose Location', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-              ...items,
+              ...validLocations.map((locEntry) => ListTile(
+                leading: const Icon(Icons.location_on, color: Colors.red),
+                title: Text(locEntry.key, maxLines: 2, overflow: TextOverflow.ellipsis),
+                onTap: () {
+                  Navigator.pop(context);
+                  onNavigateToMap?.call(locEntry.value);
+                },
+              )),
             ],
           ),
         );
@@ -417,7 +420,39 @@ class ContactListItem extends StatelessWidget {
       ),
     );
   }
+<<<<<<< HEAD
    //  to get formatted name 
+=======
+
+  List<MapEntry<String, LatLng>> _getValidLocations() {
+    final List<MapEntry<String, LatLng>> validLocations = [];
+    
+    // 1. Parse websites
+    for (int i = 0; i < contact.websites.length; i++) {
+      final loc = MapUtils.parseLocationLink(contact.websites[i].url);
+      if (loc != null) {
+         String label = 'Location ${validLocations.length + 1}';
+         if (i < contact.addresses.length && contact.addresses[i].formatted?.isNotEmpty == true) {
+           label = contact.addresses[i].formatted!;
+         }
+         validLocations.add(MapEntry(label, loc));
+      }
+    }
+
+    // 2. Parse addresses
+    for (final addr in contact.addresses) {
+       final loc = MapUtils.parseLocationLink(addr.formatted ?? '');
+       if (loc != null) {
+         // Prevent exact duplicates
+         if (!validLocations.any((e) => e.value.latitude == loc.latitude && e.value.longitude == loc.longitude)) {
+           validLocations.add(MapEntry(addr.formatted ?? 'Address Location', loc));
+         }
+       }
+    }
+    return validLocations;
+  }
+
+>>>>>>> 9079bdd5f02c9c139e917f2c957753bcf5a44ec5
   String _getFormattedName(Contact contact, ContactNameFormat format) {
     final first = contact.name?.first ?? '';
     final last = contact.name?.last ?? '';

@@ -86,7 +86,7 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
       // load contacts with properties and photo
       final contacts = await _contactService.getContacts(
         withProperties: true,
-        withPhoto: false,
+        withPhoto: true,
       );
 
       final sortOrder =
