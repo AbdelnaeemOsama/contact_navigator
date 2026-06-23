@@ -19,7 +19,7 @@ class VoiceAssistantService {
 
   // تهيئة الخدمة وضبط اللغة وسرعة نطق الكلمات ومستوى الصوت ونبرته
   Future<void> init() async {
-    await _tts.setLanguage("en-US");
+    await _tts.setLanguage("ar-EG");
     await _tts.setSpeechRate(0.5);
     await _tts.setVolume(1.0);
     await _tts.setPitch(1.0);
