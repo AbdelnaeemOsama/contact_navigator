@@ -20,4 +20,36 @@ class TextUtils {
   static TextAlign getTextAlign(String text) {
     return isArabic(text) ? TextAlign.right : TextAlign.left;
   }
+
+  /// Removes Arabic diacritics (tashkeel).
+  static String removeDiacritics(String text) {
+    final diacriticsRegex = RegExp(r'[\u064B-\u0652]');
+    return text.replaceAll(diacriticsRegex, '');
+  }
+
+  /// Strips non-Arabic/alphanumeric symbols like ★, @, •, etc.
+  static String stripSymbols(String text) {
+    final symbolRegex = RegExp(r'[^a-zA-Z0-9\s\u0621-\u064A\u0660-\u0669\u0671-\u06D3]');
+    return text.replaceAll(symbolRegex, '');
+  }
+
+  /// Normalises a string by removing diacritics, stripping symbols, lowercasing, and cleaning whitespace.
+  static String normalise(String text) {
+    final cleanDiacritics = removeDiacritics(text);
+    final cleanSymbols = stripSymbols(cleanDiacritics);
+    return cleanSymbols.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  /// Builds a display name fallback if displayName is null/empty.
+  static String buildDisplayName(String? displayName, String? firstName, String? lastName) {
+    final dn = (displayName ?? '').trim();
+    if (dn.isNotEmpty) return dn;
+
+    final fn = (firstName ?? '').trim();
+    final ln = (lastName ?? '').trim();
+    if (fn.isNotEmpty || ln.isNotEmpty) {
+      return '$fn $ln'.trim();
+    }
+    return 'Unknown';
+  }
 }

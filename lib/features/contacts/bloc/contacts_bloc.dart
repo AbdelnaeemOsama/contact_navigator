@@ -5,6 +5,7 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:contact_navigator/core/services/contact_service.dart';
 import 'package:contact_navigator/core/services/group_service.dart';
 import 'package:contact_navigator/core/services/settings_service.dart';
+import 'package:contact_navigator/core/utils/text_utils.dart';
 import 'contacts_event.dart';
 import 'contacts_state.dart';
 
@@ -135,14 +136,19 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     if (query.isEmpty) {
       return List<Contact>.from(contacts);
     }
-    final lowerQuery = query.toLowerCase();
+    final normalizedQuery = TextUtils.normalise(query);
     final rawQuery = query.replaceAll(RegExp(r'\D'), '');
     final filtered = contacts.where((contact) {
-      final name = (contact.displayName ?? '').toLowerCase();
+      final displayName = TextUtils.buildDisplayName(
+        contact.displayName,
+        contact.name?.first,
+        contact.name?.last,
+      );
+      final normalizedName = TextUtils.normalise(displayName);
       final phones = contact.phones
           .map((p) => p.number.replaceAll(RegExp(r'\D'), ''))
           .toList();
-      final matchesName = name.contains(lowerQuery);
+      final matchesName = normalizedName.contains(normalizedQuery);
       final matchesPhone =
           rawQuery.isNotEmpty && phones.any((p) => p.contains(rawQuery));
       return matchesName || matchesPhone;
@@ -380,16 +386,19 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
   }
 
   String _sortPrimaryName(Contact contact, ContactSortOrder sortOrder) {
+    final displayName = TextUtils.buildDisplayName(
+      contact.displayName,
+      contact.name?.first,
+      contact.name?.last,
+    );
     final first = (contact.name?.first ?? '').trim();
     final last = (contact.name?.last ?? '').trim();
-    final display = (contact.displayName ?? '').trim();
+    final display = displayName.trim();
 
     if (sortOrder == ContactSortOrder.firstName) {
-      return (first.isNotEmpty ? first : (last.isNotEmpty ? last : display))
-          .toLowerCase();
+      return TextUtils.normalise(first.isNotEmpty ? first : (last.isNotEmpty ? last : display));
     }
-    return (last.isNotEmpty ? last : (first.isNotEmpty ? first : display))
-        .toLowerCase();
+    return TextUtils.normalise(last.isNotEmpty ? last : (first.isNotEmpty ? first : display));
   }
 
   String _sortSecondaryName(Contact contact, ContactSortOrder sortOrder) {
@@ -397,8 +406,8 @@ class ContactsBloc extends Bloc<ContactsEvent, ContactsState> {
     final last = (contact.name?.last ?? '').trim();
 
     if (sortOrder == ContactSortOrder.firstName) {
-      return last.toLowerCase();
+      return TextUtils.normalise(last);
     }
-    return first.toLowerCase();
+    return TextUtils.normalise(first);
   }
 }

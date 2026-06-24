@@ -52,7 +52,6 @@ dependencies:
   shared_preferences: ^2.5.5
   flutter_phone_direct_caller: ^2.2.1
   app_links: ^7.0.0
-  speech_to_text: ^7.0.0
   uuid: ^4.5.3
   http: ^1.2.1
 

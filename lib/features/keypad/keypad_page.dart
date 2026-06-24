@@ -49,17 +49,7 @@ class _KeypadPageState extends State<KeypadPage> {
   String _dialedNumber = '';
   bool _isCalling = false;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final state = context.read<ContactsBloc>().state;
-      if (state is ContactsInitial) {
-        context.read<ContactsBloc>().add(const LoadContactsEvent());
-      }
-    });
-  }
+
 
   static String _letterToT9(String ch) {
     final c = ch.toLowerCase();
@@ -169,8 +159,10 @@ class _KeypadPageState extends State<KeypadPage> {
   }
 
   Future<void> _makeCall([String? number]) async {
-    final targetNumber = number ?? _dialedNumber;
-    if (targetNumber.replaceAll(RegExp(r'\D'), '').isEmpty && !targetNumber.contains('+')) {
+    var targetNumber = number ?? _dialedNumber;
+    final hasDigits = targetNumber.replaceAll(RegExp(r'\D'), '').isNotEmpty;
+    final hasSpecial = targetNumber.contains('+') || targetNumber.contains('*') || targetNumber.contains('#');
+    if (!hasDigits && !hasSpecial) {
       return;
     }
     if (_isCalling) return;
@@ -179,6 +171,9 @@ class _KeypadPageState extends State<KeypadPage> {
     setState(() => _isCalling = true);
 
     try {
+      if (targetNumber.contains('*') || targetNumber.contains('#')) {
+        targetNumber = Uri.encodeComponent(targetNumber);
+      }
       await FlutterPhoneDirectCaller.callNumber(targetNumber);
     } catch (_) {
       if (mounted) {
@@ -396,6 +391,14 @@ class _KeypadPageState extends State<KeypadPage> {
                         onTap: () {
                           HapticFeedback.selectionClick();
                           setState(() => _dialedNumber = item.dialFieldValue);
+                        },
+                        onLongPress: () {
+                          Navigator.push<void>(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (context) => AddContactPage(contactToEdit: item.contact),
+                            ),
+                          );
                         },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),

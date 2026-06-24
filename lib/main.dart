@@ -8,8 +8,6 @@ import 'package:contact_navigator/features/contacts/bloc/contacts_bloc.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_event.dart';
 import 'package:contact_navigator/features/contacts/bloc/categories_bloc.dart';
 import 'package:contact_navigator/features/contacts/bloc/categories_event.dart';
-import 'package:contact_navigator/features/voice_assistant/bloc/voice_assistant_bloc.dart';
-import 'package:contact_navigator/features/voice_assistant/services/voice_assistant_service.dart';
 import 'package:contact_navigator/core/routes/app_routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -60,24 +58,7 @@ class ContactNavigatorApp extends StatelessWidget {
                 CategoriesBloc(context.read<IGroupService>())
                   ..add(LoadCategoriesEvent()),
           ),
-          BlocProvider(
-            create: (context) => VoiceAssistantBloc(
-              contactsBloc: context.read<ContactsBloc>(),
-              service: VoiceCommandService(
-                onNavigate: (contact) async {
-                  final phones = contact.phones;
-                  if (phones.isNotEmpty) {
-                    final link = contact.websites.isNotEmpty
-                        ? contact.websites.first.url
-                        : '';
-                    if (link.isNotEmpty) {
-                      // Navigation handled by map route
-                    }
-                  }
-                },
-              ),
-            ),
-          ),
+
         ],
         child: const AppInitializer(),
       ),

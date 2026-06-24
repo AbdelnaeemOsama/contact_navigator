@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:contact_navigator/core/theme/app_theme.dart';
 import 'package:contact_navigator/features/contacts/add_contact_page.dart';
 import 'package:contact_navigator/core/services/voice_service.dart';
@@ -18,7 +19,6 @@ import 'widgets/contacts_favorites_section.dart';
 import 'package:contact_navigator/core/widgets/custom_bottom_nav.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
-import 'package:contact_navigator/features/voice_assistant/bloc/voice_assistant_bloc.dart';
 import 'package:contact_navigator/core/utils/map_utils.dart';
 
 
@@ -195,68 +195,68 @@ class _ContactsPageState extends State<ContactsPage> {
     const lightBlue = Color(0xFF33A1E5);
 
     return PopScope(
-      canPop: _selectedIndex == 0,
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         if (_selectedIndex != 0) {
           setState(() {
             _selectedIndex = 0;
           });
+        } else {
+          final shouldExit = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Exit App'),
+              content: const Text('Are you sure you want to exit?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Exit'),
+                ),
+              ],
+            ),
+          );
+          if (shouldExit == true) {
+            SystemNavigator.pop();
+          }
         }
       },
-      child: BlocListener<VoiceAssistantBloc, VoiceAssistantState>(
-        listener: (context, state) {
-          if (state is VoiceAssistantExecuting && state.intent == VoiceIntent.navigate) {
-            final contact = state.contact;
-            final validLocations = _getValidLocationsForVoice(contact);
-
-            if (validLocations.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('No location saved for ${contact.displayName}'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            } else if (validLocations.length > 1) {
-              _showVoiceLocationPicker(context, contact, validLocations);
-            } else {
-              _navigateToMap(validLocations.first.value);
-            }
-          }
-        },
-        child: Scaffold(
-          backgroundColor: AppColors.background,
-          body: Stack(
-            children: [
-              // Main content with bottom padding so content doesn't hide behind nav
-              Positioned.fill(
-                child: SafeArea(
-                  bottom: false,
-                  child: _buildBody(lightBlue),
-                ),
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        body: Stack(
+          children: [
+            // Main content with bottom padding so content doesn't hide behind nav
+            Positioned.fill(
+              child: SafeArea(
+                bottom: false,
+                child: _buildBody(lightBlue),
               ),
-              // Floating bottom nav overlay
+            ),
+            // Floating bottom nav overlay
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: CustomBottomNav(
+                selectedIndex: _selectedIndex,
+                onItemSelected: (index) => setState(() {
+                  _selectedIndex = index;
+                  if (index == 2) _mapVisited = true;
+                }),
+              ),
+            ),
+            // FAB overlay
+            if (_buildFab(lightBlue) != null)
               Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: CustomBottomNav(
-                  selectedIndex: _selectedIndex,
-                  onItemSelected: (index) => setState(() {
-                    _selectedIndex = index;
-                    if (index == 2) _mapVisited = true;
-                  }),
-                ),
+                right: 16,
+                bottom: 120,
+                child: _buildFab(lightBlue)!,
               ),
-              // FAB overlay
-              if (_buildFab(lightBlue) != null)
-                Positioned(
-                  right: 16,
-                  bottom: 120,
-                  child: _buildFab(lightBlue)!,
-                ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -405,57 +405,5 @@ class _ContactsPageState extends State<ContactsPage> {
     return AppColors.contactAvatarColors[hash % AppColors.contactAvatarColors.length];
   }
 
-  List<MapEntry<String, LatLng>> _getValidLocationsForVoice(Contact contact) {
-    final List<MapEntry<String, LatLng>> validLocations = [];
 
-    // 1. Parse websites
-    for (int i = 0; i < contact.websites.length; i++) {
-      final loc = MapUtils.parseLocationLink(contact.websites[i].url);
-      if (loc != null) {
-        String label = 'Location ${validLocations.length + 1}';
-        if (i < contact.addresses.length && contact.addresses[i].formatted?.isNotEmpty == true) {
-          label = contact.addresses[i].formatted!;
-        }
-        validLocations.add(MapEntry(label, loc));
-      }
-    }
-
-    // 2. Parse addresses
-    for (final addr in contact.addresses) {
-      final text = addr.formatted ?? '';
-      if (text.isEmpty) continue;
-      final loc = MapUtils.parseLocationLink(text);
-      if (loc != null) {
-        if (!validLocations.any((e) => e.value.latitude == loc.latitude && e.value.longitude == loc.longitude)) {
-          validLocations.add(MapEntry(text, loc));
-        }
-      }
-    }
-    return validLocations;
-  }
-
-  void _showVoiceLocationPicker(BuildContext context, Contact contact, List<MapEntry<String, LatLng>> locations) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Choose Location for ${contact.displayName}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            ...locations.map((locEntry) => ListTile(
-              leading: const Icon(Icons.location_on, color: Colors.red),
-              title: Text(locEntry.key, maxLines: 2, overflow: TextOverflow.ellipsis),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToMap(locEntry.value);
-              },
-            )),
-          ],
-        ),
-      ),
-    );
-  }
 }

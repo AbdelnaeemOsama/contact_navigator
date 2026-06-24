@@ -3,6 +3,7 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:contact_navigator/core/utils/map_utils.dart';
+import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 
 class ContactPreviewSheet extends StatelessWidget {
   final Contact contact;
@@ -25,6 +26,13 @@ class ContactPreviewSheet extends StatelessWidget {
     final Uri smsUri = Uri.parse('sms:$phone');
     try {
       await launchUrl(smsUri);
+    } catch (_) {}
+  }
+
+  Future<void> _makeCall(String phone) async {
+    if (phone.isEmpty) return;
+    try {
+      await FlutterPhoneDirectCaller.callNumber(phone);
     } catch (_) {}
   }
 
@@ -191,6 +199,20 @@ class ContactPreviewSheet extends StatelessWidget {
               children: [
                 Expanded(
                   child: ElevatedButton(
+                    onPressed: phone.isEmpty ? null : () => _makeCall(phone),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                    child: const Text('Call', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
                     onPressed: isRouting ? null : () => onGetDirections(contact, focusLatLng),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFD4E4FC),
@@ -201,10 +223,10 @@ class ContactPreviewSheet extends StatelessWidget {
                     ),
                     child: isRouting 
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Get Directions', style: TextStyle(fontWeight: FontWeight.w700)),
+                      : const Text('Directions', style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () => _launchSms(phone),

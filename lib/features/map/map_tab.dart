@@ -555,6 +555,8 @@ class _MapTabState extends State<MapTab> {
                   initialCenter:
                       _currentLocation ?? const LatLng(30.0444, 31.2357),
                   initialZoom: _currentLocation != null ? 15 : 13,
+                  minZoom: 3.0,
+                  maxZoom: 18.0,
                 ),
                 children: [
                   TileLayer(
