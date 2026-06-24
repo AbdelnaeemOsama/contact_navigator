@@ -146,10 +146,14 @@ class ContactService implements IContactService {
   // تحديث بيانات جهة الاتصال بالنظام مع دمج التغييرات مع البيانات المخزنة محلياً لتفادي فقدان المعرفات الفريدة
   @override
   Future<void> updateContact(Contact contact) async {
+    final id = contact.id;
+    if (id == null || id.isEmpty) {
+      throw ArgumentError('Cannot update contact without an ID');
+    }
     // Re-fetch the full contact with all system-level identifiers
     // This is the pattern used in the official examples for reliable Android updates
     final full = await FlutterContacts.get(
-      contact.id!,
+      id,
       properties: ContactProperties.all,
     );
 
