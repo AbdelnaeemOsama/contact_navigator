@@ -1,11 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:flutter_contacts/flutter_contacts.dart';
 
-import 'package:contact_navigator/core/services/group_service.dart';
 import 'package:contact_navigator/features/contacts/bloc/contacts_bloc.dart';
-import 'package:contact_navigator/features/contacts/bloc/contacts_state.dart';
 import 'package:contact_navigator/features/contacts/bloc/group_contacts_bloc.dart';
 import 'package:contact_navigator/features/contacts/bloc/group_contacts_event.dart';
 import 'package:contact_navigator/features/contacts/bloc/group_contacts_state.dart';

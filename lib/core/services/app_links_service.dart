@@ -36,72 +36,82 @@ class AppLinksService {
   }
 
   // تحليل ومعالجة الرابط العميق الوارد وتوجيهه للإجراء المناسب (مثل الاتصال أو الملاحة)
-  void _handleDeepLink(Uri uri) async {
-    debugPrint('Received Deep Link: $uri');
-    if (uri.scheme == 'contactnavigator') {
-      if (uri.host == 'call') {
-        final name = uri.queryParameters['name'] ?? '';
-        if (name.isNotEmpty) {
-          _handleCallCommand(name);
-        }
-      } else if (uri.host == 'navigate') {
-        final destination = uri.queryParameters['destination'] ?? '';
-        if (destination.isNotEmpty) {
-          _handleNavigateCommand(destination);
+  Future<void> _handleDeepLink(Uri uri) async {
+    try {
+      debugPrint('Received Deep Link: $uri');
+      if (uri.scheme == 'contactnavigator') {
+        if (uri.host == 'call') {
+          final name = uri.queryParameters['name'] ?? '';
+          if (name.isNotEmpty) {
+            await _handleCallCommand(name);
+          }
+        } else if (uri.host == 'navigate') {
+          final destination = uri.queryParameters['destination'] ?? '';
+          if (destination.isNotEmpty) {
+            await _handleNavigateCommand(destination);
+          }
         }
       }
+    } catch (e) {
+      debugPrint('Failed to handle deep link: $e');
     }
   }
 
   // معالجة أمر الاتصال الهاتفي لجهة اتصال محددة بالاسم من الرابط
-  void _handleCallCommand(String name) async {
-    final state = _contactsBloc.state;
-    if (state is ContactsLoaded) {
-      final lowerName = name.toLowerCase();
-      final matches = state.allContacts.where((c) {
-        return c.displayName?.toLowerCase().contains(lowerName) ?? false;
-      }).toList();
+  Future<void> _handleCallCommand(String name) async {
+    try {
+      final state = _contactsBloc.state;
+      if (state is ContactsLoaded) {
+        final lowerName = name.toLowerCase();
+        final matches = state.allContacts.where((c) {
+          return c.displayName?.toLowerCase().contains(lowerName) ?? false;
+        }).toList();
 
-      if (matches.isNotEmpty) {
-        final contact = matches.first;
-        if (contact.phones.isNotEmpty) {
-          final phone = contact.phones.first.number;
-          await FlutterPhoneDirectCaller.callNumber(phone);
+        if (matches.isNotEmpty) {
+          final contact = matches.first;
+          if (contact.phones.isNotEmpty) {
+            final phone = contact.phones.first.number;
+            await FlutterPhoneDirectCaller.callNumber(phone);
+          }
         }
       }
+    } catch (e) {
+      debugPrint('Failed to handle call command: $e');
     }
   }
 
   // معالجة أمر الانتقال والملاحة الجغرافية لوجهة معينة بالاسم أو الرابط من الرابط العميق
-  void _handleNavigateCommand(String destination) async {
-    // Attempt to parse location link if exists, otherwise open GMaps with query
-    final state = _contactsBloc.state;
-    if (state is ContactsLoaded) {
-      final lowerName = destination.toLowerCase();
-      final matches = state.allContacts.where((c) {
-        return c.displayName?.toLowerCase().contains(lowerName) ?? false;
-      }).toList();
+  Future<void> _handleNavigateCommand(String destination) async {
+    try {
+      // Attempt to parse location link if exists, otherwise open GMaps with query
+      final state = _contactsBloc.state;
+      if (state is ContactsLoaded) {
+        final lowerName = destination.toLowerCase();
+        final matches = state.allContacts.where((c) {
+          return c.displayName?.toLowerCase().contains(lowerName) ?? false;
+        }).toList();
 
-      if (matches.isNotEmpty) {
-        final contact = matches.first;
-        if (contact.websites.isNotEmpty) {
-          final link = contact.websites.first.url;
-          if (link.isNotEmpty) {
-            final uri = Uri.parse(link);
-            try {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-              return;
-            } catch (_) {}
+        if (matches.isNotEmpty) {
+          final contact = matches.first;
+          if (contact.websites.isNotEmpty) {
+            final link = contact.websites.first.url;
+            if (link.isNotEmpty) {
+              final uri = Uri.parse(link);
+              try {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                return;
+              } catch (_) {}
+            }
           }
         }
       }
-    }
 
-    // Fallback: Just open Google Maps with the query
-    final uri = Uri.parse('google.navigation:q=${Uri.encodeComponent(destination)}');
-    try {
+      // Fallback: Just open Google Maps with the query
+      final uri = Uri.parse('google.navigation:q=${Uri.encodeComponent(destination)}');
       await launchUrl(uri);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Failed to handle navigate command: $e');
+    }
   }
 
   // إلغاء الاشتراك في تدفق الروابط عند التخلص من الخدمة لمنع تسريب الذاكرة
