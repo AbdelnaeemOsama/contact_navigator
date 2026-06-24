@@ -74,4 +74,17 @@ void main() {
       expect(link, contains('mlon=31.2357'));
     });
   });
+
+  group('MapUtils.resolveLocationLink', () {
+    test('returns original link if not a short link', () async {
+      final link = 'https://www.google.com/maps/place/30.0444,31.2357';
+      final resolved = await MapUtils.resolveLocationLink(link);
+      expect(resolved, equals(link));
+    });
+
+    test('returns original link for empty string', () async {
+      final resolved = await MapUtils.resolveLocationLink('');
+      expect(resolved, equals(''));
+    });
+  });
 }

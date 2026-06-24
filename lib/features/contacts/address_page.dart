@@ -54,12 +54,24 @@ class _AddressPageState extends State<AddressPage> {
   }
 
   // الاستجابة للتغير في حقل الرابط ومحاولة جلب الإحداثيات تلقائياً
-  void _onLinkChanged() {
+  void _onLinkChanged() async {
     final text = _linkController.text.trim();
     if (text.isEmpty) return;
     // Debounce: only parse when text looks like a URL (has http)
     if (!text.startsWith('http')) return;
-    final parsed = MapUtils.parseLocationLink(text);
+    
+    var parsed = MapUtils.parseLocationLink(text);
+    if (parsed != null) {
+      _moveToLocation(parsed, updateLink: false);
+      _reverseGeocode(parsed);
+      return;
+    }
+
+    final resolved = await MapUtils.resolveLocationLink(text);
+    if (!mounted) return;
+    if (_linkController.text.trim() != text) return;
+
+    parsed = MapUtils.parseLocationLink(resolved);
     if (parsed != null) {
       _moveToLocation(parsed, updateLink: false);
       _reverseGeocode(parsed);
@@ -213,7 +225,7 @@ class _AddressPageState extends State<AddressPage> {
 
   /// Parse a pasted link and jump the map to it
   // تحليل الرابط الملصق والانتقال إليه على الخريطة مباشرة
-  void _parseAndJumpToLink() {
+  Future<void> _parseAndJumpToLink() async {
     final link = _linkController.text.trim();
     if (link.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -222,7 +234,14 @@ class _AddressPageState extends State<AddressPage> {
       return;
     }
 
-    final parsed = MapUtils.parseLocationLink(link);
+    var parsed = MapUtils.parseLocationLink(link);
+    if (parsed == null) {
+      final resolved = await MapUtils.resolveLocationLink(link);
+      parsed = MapUtils.parseLocationLink(resolved);
+    }
+
+    if (!mounted) return;
+
     if (parsed != null) {
       _moveToLocation(parsed, updateLink: false);
       _reverseGeocode(parsed);

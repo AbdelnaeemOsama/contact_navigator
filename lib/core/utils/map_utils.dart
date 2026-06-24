@@ -82,6 +82,67 @@ class MapUtils {
     return null;
   }
 
+  /// Resolves short location links by following HTTP redirects (up to 5 hops)
+  static Future<String> resolveLocationLink(String link) async {
+    if (link.isEmpty) return link;
+
+    final lowerLink = link.toLowerCase();
+    final isShortLink = lowerLink.contains('goo.gl') ||
+        lowerLink.contains('g.co') ||
+        lowerLink.contains('pp.goo.gl') ||
+        lowerLink.contains('maps.app.goo.gl');
+
+    if (!isShortLink) return link;
+
+    final client = http.Client();
+    try {
+      String currentUrl = link;
+      int hops = 0;
+      while (hops < 5) {
+        final uri = Uri.parse(currentUrl);
+        final request = http.Request('GET', uri)..followRedirects = false;
+        request.headers['User-Agent'] =
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
+        
+        final streamedResponse = await client.send(request);
+        
+        final status = streamedResponse.statusCode;
+        if (status < 300 || status >= 400) {
+          break;
+        }
+
+        String? location = streamedResponse.headers['location'];
+        if (location == null) {
+          for (final key in streamedResponse.headers.keys) {
+            if (key.toLowerCase() == 'location') {
+              location = streamedResponse.headers[key];
+              break;
+            }
+          }
+        }
+
+        if (location == null || location.isEmpty) {
+          break;
+        }
+
+        final redirectUri = Uri.parse(location);
+        if (redirectUri.isAbsolute) {
+          currentUrl = location;
+        } else {
+          currentUrl = uri.resolveUri(redirectUri).toString();
+        }
+
+        hops++;
+      }
+      return currentUrl;
+    } catch (e) {
+      debugPrint('Error resolving location link: $e');
+      return link;
+    } finally {
+      client.close();
+    }
+  }
+
   /// Generates an OpenStreetMap URL for the given coordinates
   // توليد رابط OpenStreetMap بالاعتماد على إحداثيات معينة
   static String generateOsmLink(LatLng location) {

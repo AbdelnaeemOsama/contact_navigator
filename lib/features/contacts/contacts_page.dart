@@ -18,7 +18,6 @@ import 'widgets/contacts_favorites_section.dart';
 import 'package:contact_navigator/core/widgets/custom_bottom_nav.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
-import 'package:contact_navigator/features/voice_assistant/widgets/voice_assistant_widget.dart';
 import 'package:contact_navigator/features/voice_assistant/bloc/voice_assistant_bloc.dart';
 import 'package:contact_navigator/core/utils/map_utils.dart';
 
@@ -255,13 +254,6 @@ class _ContactsPageState extends State<ContactsPage> {
                   right: 16,
                   bottom: 120,
                   child: _buildFab(lightBlue)!,
-                ),
-              // Voice Assistant FAB overlay
-              if (_selectedIndex == 0 || _selectedIndex == 2 || _selectedIndex == 3)
-                const Positioned(
-                  left: 16,
-                  bottom: 120,
-                  child: VoiceAssistantFab(),
                 ),
             ],
           ),
