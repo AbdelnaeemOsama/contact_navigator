@@ -29,7 +29,7 @@ void main() {
           Category(id: '1', name: 'Alpha'),
           Category(id: '2', name: 'Beta'),
         ]);
-        return CategoriesBloc(mockGroupService, externalChanges: noChanges);
+        return CategoriesBloc(mockGroupService,);
       },
       act: (bloc) => bloc.add(LoadCategoriesEvent()),
       expect: () => [isA<CategoriesLoaded>()],
@@ -47,7 +47,7 @@ void main() {
         when(() => mockGroupService.getGroups(
           withContactCount: any(named: 'withContactCount'),
         )).thenThrow(Exception('Service failed'));
-        return CategoriesBloc(mockGroupService, externalChanges: noChanges);
+        return CategoriesBloc(mockGroupService);
       },
       act: (bloc) => bloc.add(LoadCategoriesEvent()),
       expect: () => [isA<CategoriesError>()],
@@ -56,7 +56,7 @@ void main() {
     blocTest<CategoriesBloc, CategoriesState>(
       'search filters by name',
       build: () {
-        return CategoriesBloc(mockGroupService, externalChanges: noChanges);
+        return CategoriesBloc(mockGroupService);
       },
       seed: () => CategoriesLoaded(
         allGroups: [
@@ -83,7 +83,7 @@ void main() {
     blocTest<CategoriesBloc, CategoriesState>(
       'search with empty query returns all groups',
       build: () {
-        return CategoriesBloc(mockGroupService, externalChanges: noChanges);
+        return CategoriesBloc(mockGroupService);
       },
       seed: () => CategoriesLoaded(
         allGroups: [
@@ -115,7 +115,7 @@ void main() {
           Category(id: '1', name: 'Alpha'),
           Category(id: '3', name: 'NewCat'),
         ]);
-        return CategoriesBloc(mockGroupService, externalChanges: noChanges);
+        return CategoriesBloc(mockGroupService);
       },
       act: (bloc) => bloc.add(AddCategoryEvent('NewCat')),
       expect: () => [isA<CategoriesLoaded>()],
@@ -135,7 +135,7 @@ void main() {
         )).thenAnswer((_) async => [
           Category(id: '2', name: 'Beta'),
         ]);
-        return CategoriesBloc(mockGroupService, externalChanges: noChanges);
+        return CategoriesBloc(mockGroupService);
       },
       act: (bloc) => bloc.add(DeleteCategoryEvent('1')),
       expect: () => [isA<CategoriesLoaded>()],
@@ -156,7 +156,7 @@ void main() {
         )).thenAnswer((_) async => [
           Category(id: '1', name: 'Renamed'),
         ]);
-        return CategoriesBloc(mockGroupService, externalChanges: noChanges);
+        return CategoriesBloc(mockGroupService);
       },
       act: (bloc) => bloc.add(UpdateCategoryEvent('1', 'Renamed')),
       expect: () => [isA<CategoriesLoaded>()],
