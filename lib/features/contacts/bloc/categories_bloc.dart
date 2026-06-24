@@ -8,7 +8,7 @@ import 'dart:async';
 class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
   final IGroupService _groupService;
 
-  CategoriesBloc(this._groupService) : super(CategoriesInitial()) {
+  CategoriesBloc(this._groupService, {required Stream<void> externalChanges}) : super(CategoriesInitial()) {
     on<LoadCategoriesEvent>(_onLoadCategories);
     on<SearchCategoriesEvent>(_onSearchCategories);
     on<AddCategoryEvent>(_onAddCategory);
