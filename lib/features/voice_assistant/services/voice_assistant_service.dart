@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
@@ -14,6 +15,7 @@ class ParsedIntent {
 class VoiceCommandService {
   final FlutterTts _tts;
   final stt.SpeechToText _stt;
+  Timer? _listeningTimer;
 
   final Future<void> Function(Contact contact)? onNavigate;
 
@@ -43,6 +45,7 @@ class VoiceCommandService {
     required void Function(String text) onFinalResult,
     required void Function(String msg) onError,
   }) async {
+    _listeningTimer?.cancel();
     await _stt.listen(
       listenOptions: stt.SpeechListenOptions(
         localeId: 'ar_EG',
@@ -58,12 +61,13 @@ class VoiceCommandService {
         }
       },
     );
-    Future.delayed(const Duration(seconds: 12), () {
+    _listeningTimer = Timer(const Duration(seconds: 12), () {
       if (_stt.isListening) stopListening();
     });
   }
 
   Future<void> stopListening() async {
+    _listeningTimer?.cancel();
     if (_stt.isListening) await _stt.stop();
   }
 
@@ -176,6 +180,7 @@ class VoiceCommandService {
   }
 
   void dispose() {
+    _listeningTimer?.cancel();
     _tts.stop();
     _stt.stop();
   }

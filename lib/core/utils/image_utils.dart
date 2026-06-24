@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-// ignore: depend_on_referenced_packages
 import 'package:image/image.dart' as img;
 
 /// Runs image-orientation fixing in an isolate to avoid blocking the UI.

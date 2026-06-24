@@ -45,6 +45,9 @@ abstract class IGroupService {
 
   // تعديل اسم مجموعة حالية
   Future<void> updateGroup(String groupId, String newName);
+
+  // تنظيف الموارد وتفادي تسريب الذاكرة
+  void dispose();
 }
 
 // تنفيذ خدمة إدارة مجموعات جهات الاتصال محلياً بالاعتماد على SharedPreferences لحفظ البيانات
@@ -193,6 +196,7 @@ class GroupService implements IGroupService {
   }
 
   // إغلاق متحكم تدفق التغييرات
+  @override
   void dispose() {
     _changeController.close();
   }
