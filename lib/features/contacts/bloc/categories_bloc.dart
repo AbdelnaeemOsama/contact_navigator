@@ -8,9 +8,6 @@ import 'dart:async';
 class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
   final IGroupService _groupService;
 
-
-  CategoriesBloc(this._groupService, {required Stream<void> externalChanges}) : super(CategoriesInitial()) {
-=======
   CategoriesBloc(
     this._groupService, {
     Stream<void>? externalChanges,
