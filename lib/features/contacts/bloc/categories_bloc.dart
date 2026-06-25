@@ -28,6 +28,7 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
     _groupsSubscription = _groupService.onGroupsChanged.listen((_) {
       _scheduleReload();
     });
+
   }
 
   StreamSubscription? _contactsSubscription;
