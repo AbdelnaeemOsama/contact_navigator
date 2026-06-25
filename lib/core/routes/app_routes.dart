@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:contact_navigator/features/onboarding/splash_screen.dart';
-import 'package:contact_navigator/features/onboarding/onboarding_screen.dart';
 import 'package:contact_navigator/features/contacts/contacts_page.dart';
 
 // كلاس إدارة مسارات التطبيق والتوجيه بين الشاشات المختلفة
@@ -15,7 +14,6 @@ class AppRoutes {
       case splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
       case onboarding:
-        return MaterialPageRoute(builder: (_) => const OnboardingScreen());
       case home:
         return MaterialPageRoute(builder: (_) => const ContactsPage());
       default:
