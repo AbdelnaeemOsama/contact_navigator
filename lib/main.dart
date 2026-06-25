@@ -38,7 +38,10 @@ class ContactNavigatorApp extends StatelessWidget {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider<IContactService>(create: (_) => ContactService()),
-        RepositoryProvider<IGroupService>(create: (_) => GroupService(prefs)),
+        RepositoryProvider<IGroupService>(
+          create: (_) => GroupService(prefs),
+          dispose: (service) => service.dispose(),
+        ),
         RepositoryProvider<SettingsService>(create: (_) => settingsService),
         RepositoryProvider<VoiceAssistantService>(
           create: (_) => VoiceAssistantService(settingsService)..init(),
@@ -97,7 +100,7 @@ class _AppInitializerState extends State<AppInitializer> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      initialRoute: AppRoutes.home,
+      initialRoute: AppRoutes.splash,
       onGenerateRoute: AppRoutes.generateRoute,
       theme: ThemeData(
         fontFamily: AppFonts.primary,

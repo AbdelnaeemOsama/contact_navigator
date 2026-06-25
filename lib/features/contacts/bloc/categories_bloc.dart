@@ -8,7 +8,10 @@ import 'dart:async';
 class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
   final IGroupService _groupService;
 
-  CategoriesBloc(this._groupService) : super(CategoriesInitial()) {
+  CategoriesBloc(
+    this._groupService, {
+    Stream<void>? externalChanges,
+  }) : super(CategoriesInitial()) {
     on<LoadCategoriesEvent>(_onLoadCategories);
     on<SearchCategoriesEvent>(_onSearchCategories);
     on<AddCategoryEvent>(_onAddCategory);
@@ -16,7 +19,8 @@ class CategoriesBloc extends Bloc<CategoriesEvent, CategoriesState> {
     on<UpdateCategoryEvent>(_onUpdateCategory);
 
     // Listen for system-wide contact changes to update counts
-    _contactsSubscription = FlutterContacts.onContactChange.listen((_) {
+    final source = externalChanges ?? FlutterContacts.onContactChange;
+    _contactsSubscription = source.listen((_) {
       _scheduleReload();
     });
 
